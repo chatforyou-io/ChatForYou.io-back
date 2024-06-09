@@ -1,7 +1,10 @@
 package com.chatforyou.io.entity;
 
+import com.chatforyou.io.models.UserDto;
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.ArrayList;
@@ -10,7 +13,8 @@ import java.util.List;
 import java.util.Set;
 
 @Getter
-@Setter
+@Builder
+@NoArgsConstructor
 @Entity
 @Table(name = "USER")
 public class User {
@@ -46,4 +50,27 @@ public class User {
     @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
     private List<Social> socials;
 
+    private User(Long idx, String id, String pwd, Boolean usePwd, String name, String nickName, Long createDate, Set<Board> boards, Set<Chatroom> chatRooms, List<Social> socials) {
+        this.idx = idx;
+        this.id = id;
+        this.pwd = pwd;
+        this.usePwd = usePwd;
+        this.name = name;
+        this.nickName = nickName;
+        this.createDate = createDate;
+        this.boards = boards;
+        this.chatRooms = chatRooms;
+        this.socials = socials;
+    }
+
+    public static User of(UserDto userDto){
+        return User.builder()
+                .id(userDto.getId())
+                .pwd(userDto.getPwd())
+                .usePwd(userDto.getUsePwd())
+                .name(userDto.getName())
+                .nickName(userDto.getNickName())
+                .createDate(userDto.getCreateDate())
+                .build();
+    }
 }
