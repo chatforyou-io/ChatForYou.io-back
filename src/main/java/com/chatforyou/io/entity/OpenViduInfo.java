@@ -16,7 +16,7 @@ public class OpenViduInfo {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "CHATROOM_IDX", nullable = false)
-    private Chatroom chatroomIdx;
+    private ChatRoom chatRoomIdx;
 
     @Column(name = "FIELD", nullable = false, length = 100)
     private String field;
