@@ -10,7 +10,7 @@ import java.util.Set;
 @Setter
 @Entity
 @Table(name = "CHATROOM")
-public class Chatroom {
+public class ChatRoom {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "IDX", nullable = false)
@@ -38,7 +38,7 @@ public class Chatroom {
     @Column(name = "CREATE_DATE", nullable = false)
     private Long createDate;
 
-    @OneToMany(mappedBy = "chatroomIdx", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "chatRoomIdx", fetch = FetchType.LAZY)
     private Set<OpenViduInfo> openViduInfos;
 
 }
