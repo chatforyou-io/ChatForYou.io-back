@@ -15,6 +15,7 @@ import java.util.Set;
 @Getter
 @Builder
 @NoArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Entity
 @Table(name = "USER")
 public class User {
@@ -45,7 +46,7 @@ public class User {
     private Set<Board> boards;
 
     @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
-    private Set<Chatroom> chatRooms;
+    private Set<ChatRoom> chatRooms;
 
     @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
     private List<Social> socials;

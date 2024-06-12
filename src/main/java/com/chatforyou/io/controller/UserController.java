@@ -1,6 +1,7 @@
 package com.chatforyou.io.controller;
 
 import com.chatforyou.io.services.OpenViduService;
+import com.chatforyou.io.services.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -11,10 +12,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("user")
+@RequestMapping("/user")
 @RequiredArgsConstructor
 public class UserController {
 
+    private final UserService userService;
 
     @PostMapping("/create")
     public ResponseEntity<Map<String, Object>> createUser(@RequestBody(required = true) Map<String, Object> params,

@@ -1,20 +1,18 @@
 package com.chatforyou.io.models;
 
 import com.chatforyou.io.entity.Board;
-import com.chatforyou.io.entity.Chatroom;
+import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.entity.Social;
 import com.chatforyou.io.entity.User;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 @Getter
 @Builder
 @NoArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class UserDto {
     private Long idx;
 
@@ -32,23 +30,9 @@ public class UserDto {
 
     private Set<Board> boards;
 
-    private Set<Chatroom> chatRooms;
+    private Set<ChatRoom> chatRooms;
 
     private List<Social> socials;
-
-
-    private UserDto(Long idx, String id, String pwd, Boolean usePwd, String name, String nickName, Long createDate, Set<Board> boards, Set<Chatroom> chatRooms, List<Social> socials) {
-        this.idx = idx;
-        this.id = id;
-        this.pwd = pwd;
-        this.usePwd = usePwd;
-        this.name = name;
-        this.nickName = nickName;
-        this.createDate = createDate;
-        this.boards = boards;
-        this.chatRooms = chatRooms;
-        this.socials = socials;
-    }
 
     public static UserDto of(User user) {
         return UserDto.builder()
@@ -69,7 +53,7 @@ public class UserDto {
         return this.boards;
     }
 
-    public Set<Chatroom> getChatRooms(User user) {
+    public Set<ChatRoom> getChatRooms(User user) {
         // TODO 서비스 로직 이용
         if (this.chatRooms == null) {
             this.chatRooms = user.getChatRooms();
