@@ -40,6 +40,11 @@ public class SecurityConfig {
 		http.authorizeHttpRequests(auth -> {
 			auth.requestMatchers("/call/**").permitAll();
 			auth.requestMatchers("/auth/**").permitAll();
+			// 유저 관련
+			auth.requestMatchers("/user/**").permitAll();
+			// 채팅방 관련
+			auth.requestMatchers("/chatroom/**").permitAll();
+
 
 			// CALL_PRIVATE_ACCESS 변수에 따라 추가 권한 설정
 			if ("ENABLED".equals(CALL_PRIVATE_ACCESS)) {

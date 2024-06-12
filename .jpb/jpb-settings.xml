@@ -3,4 +3,13 @@
   <component name="JpaPluginProjectSettings">
     <option name="lastSelectedLanguage" value="Java" />
   </component>
+  <component name="PersistenceUnitSettings">
+    <persistence-units>
+      <persistence-unit name="Default">
+        <packages>
+          <package value="com.chatforyou.io" />
+        </packages>
+      </persistence-unit>
+    </persistence-units>
+  </component>
 </project>
