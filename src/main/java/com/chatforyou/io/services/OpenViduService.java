@@ -3,6 +3,8 @@ package com.chatforyou.io.services;
 
 import com.chatforyou.io.client.*;
 import com.chatforyou.io.models.RecordingData;
+import com.chatforyou.io.models.out.ConnectionInfo;
+import com.chatforyou.io.models.out.SessionInfo;
 import com.chatforyou.io.utils.RetryException;
 import com.chatforyou.io.utils.RetryOptions;
 import jakarta.annotation.PostConstruct;
@@ -12,6 +14,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class OpenViduService {
@@ -152,6 +155,24 @@ public class OpenViduService {
 			throws OpenViduJavaClientException, OpenViduHttpException, InterruptedException, RetryException {
 		RetryOptions retryOptions = new RetryOptions();
 		return createSession(sessionId, retryOptions);
+	}
+
+	public List<SessionInfo> getActiveSessionList() throws OpenViduJavaClientException, OpenViduHttpException {
+		// 최신 active session 가져오기
+		openvidu.fetch();
+		List<SessionInfo> sessionInfoList = new ArrayList<>();
+		for (Session session : openvidu.getActiveSessions()) {
+			sessionInfoList.add(SessionInfo.of(session, getConnectionInfoList(session.getConnections())));
+		}
+		return sessionInfoList;
+	}
+
+	private Map<String, ConnectionInfo> getConnectionInfoList(List<Connection> connectionList){
+		Map<String, ConnectionInfo> connectionInfoMap = new ConcurrentHashMap<>();
+		for (Connection connection : connectionList) {
+			connectionInfoMap.put(connection.getConnectionId(), ConnectionInfo.of(connection));
+		}
+		return connectionInfoMap;
 	}
 
 	/**

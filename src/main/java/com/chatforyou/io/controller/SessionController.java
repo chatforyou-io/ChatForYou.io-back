@@ -5,7 +5,7 @@ import com.chatforyou.io.models.RecordingData;
 import com.chatforyou.io.services.OpenViduService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +14,7 @@ import java.util.*;
 
 @CrossOrigin(origins = "*")
 @RestController
+@RequiredArgsConstructor
 public class SessionController {
 
 	@Value("${CALL_RECORDING}")
@@ -22,8 +23,7 @@ public class SessionController {
 	@Value("${CALL_BROADCAST}")
 	private String CALL_BROADCAST;
 
-	@Autowired
-	private OpenViduService openviduService;
+	private final OpenViduService openviduService;
 
 	private final int cookieAdminMaxAge = 24 * 60 * 60;
 
@@ -39,6 +39,7 @@ public class SessionController {
 			long date = -1;
 			String nickname = "";
 
+			// sessionId 는 일종의 roomId
 			String sessionId = params.get("sessionId").toString();
 			if (params.containsKey("nickname")) {
 				nickname = params.get("nickname").toString();
@@ -157,6 +158,13 @@ public class SessionController {
 			System.err.println(e.getMessage());
 			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
+	}
+
+	@GetMapping("/sessions")
+	public ResponseEntity<Map<String, Object>> createConnection() throws OpenViduJavaClientException, OpenViduHttpException {
+		Map<String, Object> response = new HashMap<>();
+		response.put("chatRooms", openviduService.getActiveSessionList());
+		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 
 }
