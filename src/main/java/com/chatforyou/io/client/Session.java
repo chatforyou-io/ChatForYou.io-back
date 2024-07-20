@@ -289,7 +289,7 @@ public class Session {
 		};
 
 		HttpGet request = new HttpGet(
-				this.openVidu.hostname + OpenVidu.API_SESSIONS + "/" + this.sessionId + "?pendingConnections=true");
+				this.openVidu.hostname +OpenVidu.API_SESSIONS + "/" + this.sessionId + "?pendingConnections=true");
 
 		try {
 			return this.openVidu.httpClient.execute(request, responseHandler);

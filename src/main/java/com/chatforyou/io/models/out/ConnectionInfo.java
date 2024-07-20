@@ -3,6 +3,8 @@ package com.chatforyou.io.models.out;
 import com.chatforyou.io.client.Connection;
 import com.chatforyou.io.client.Publisher;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 import lombok.*;
 import java.util.ArrayList;
@@ -38,7 +40,7 @@ public class ConnectionInfo {
     private String platform;
     @SerializedName("clientData")
     @JsonProperty("clientData")
-    private String clientData;
+    private JsonObject clientData;
     @SerializedName("token")
     @JsonProperty("token")
     private String token;
@@ -59,7 +61,7 @@ public class ConnectionInfo {
                 .location(connection.getLocation())
                 .ip(connection.getIp())
                 .platform(connection.getPlatform())
-                .clientData(connection.getClientData())
+                .clientData(connection.getClientData() != null ? new Gson().fromJson(connection.getClientData(), JsonObject.class) : new JsonObject())
                 .token(connection.getToken())
                 .subscribers(connection.getSubscribers())
                 .build();

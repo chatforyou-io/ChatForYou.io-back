@@ -1,4 +1,4 @@
-package com.chatforyou.io.models;
+package com.chatforyou.io.models.out;
 
 import com.chatforyou.io.entity.Board;
 import com.chatforyou.io.entity.ChatRoom;
@@ -13,7 +13,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class UserDto {
+public class UserInfo {
     private Long idx;
 
     private String id;
@@ -28,14 +28,15 @@ public class UserDto {
 
     private Long createDate;
 
+    // TODO 아래 3가지는 모두 output 모델로 변경할 것
     private Set<Board> boards;
 
     private Set<ChatRoom> chatRooms;
 
     private List<Social> socials;
 
-    public static UserDto of(User user) {
-        return UserDto.builder()
+    public static UserInfo of(User user) {
+        return UserInfo.builder()
                 .idx(user.getIdx())
                 .id(user.getId())
                 .pwd(user.getPwd())

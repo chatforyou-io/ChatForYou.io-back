@@ -1,9 +1,15 @@
 package com.chatforyou.io.services;
 
-import com.chatforyou.io.models.UserDto;
+import com.chatforyou.io.models.in.UserVO;
+import com.chatforyou.io.models.out.UserInfo;
 
 public interface UserService {
-    UserDto getUserByIdx(Long idx);
-    UserDto saveUser(String requestBody);
+    UserInfo getUserByIdx(Long idx);
+    UserInfo getUserById(String id);
+    boolean checkNickName(String nickName);
+    UserInfo saveUser(UserVO user);
 
+    UserInfo updateUser(UserVO user);
+
+    boolean deleteUser(UserVO userVO);
 }

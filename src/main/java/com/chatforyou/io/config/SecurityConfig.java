@@ -44,6 +44,7 @@ public class SecurityConfig {
 			auth.requestMatchers("/user/**").permitAll();
 			// 채팅방 관련
 			auth.requestMatchers("/chatroom/**").permitAll();
+			auth.requestMatchers("/sessions/**").permitAll();
 
 
 			// CALL_PRIVATE_ACCESS 변수에 따라 추가 권한 설정

@@ -34,15 +34,20 @@ public class SessionController {
 			@CookieValue(name = OpenViduService.PARTICIPANT_TOKEN_NAME, defaultValue = "") String participantCookie,
 			HttpServletResponse res) {
 
-		Map<String, Object> response = new HashMap<String, Object>();
+		Map<String, Object> response = new HashMap<>();
 		try {
 			long date = -1;
-			String nickname = "";
-
+			String nickName = "";
+			String sessionId = "";
 			// sessionId 는 일종의 roomId
-			String sessionId = params.get("sessionId").toString();
-			if (params.containsKey("nickname")) {
-				nickname = params.get("nickname").toString();
+			if (params.containsKey("sessionId")) {
+				sessionId = params.get("sessionId").toString();
+			} else if (params.containsKey("customSessionId))")) {
+				sessionId = params.get("customSessionId").toString();
+			}
+
+			if (params.containsKey("nickName")) {
+				nickName = params.get("nickName").toString();
 			}
 
 			Session sessionCreated = this.openviduService.createSession(sessionId);
@@ -67,8 +72,8 @@ public class SessionController {
 			response.put("isRecordingActive", sessionCreated.isBeingRecorded());
 			response.put("isBroadcastingActive", sessionCreated.isBeingBroadcasted());
 
-			Connection cameraConnection = this.openviduService.createConnection(sessionCreated, nickname, role);
-			Connection screenConnection = this.openviduService.createConnection(sessionCreated, nickname, role);
+			Connection cameraConnection = this.openviduService.createConnection(sessionCreated, nickName, role);
+			Connection screenConnection = this.openviduService.createConnection(sessionCreated, nickName, role);
 
 			response.put("cameraToken", cameraConnection.getToken());
 			response.put("screenToken", screenConnection.getToken());

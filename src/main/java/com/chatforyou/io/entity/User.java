@@ -1,6 +1,7 @@
 package com.chatforyou.io.entity;
 
-import com.chatforyou.io.models.UserDto;
+import com.chatforyou.io.models.in.UserVO;
+import com.chatforyou.io.models.out.UserInfo;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -46,14 +47,25 @@ public class User {
     @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
     private List<Social> socials;
 
-    public static User of(UserDto userDto){
+    public static User of(UserInfo userInfo){
         return User.builder()
-                .id(userDto.getId())
-                .pwd(userDto.getPwd())
-                .usePwd(userDto.getUsePwd())
-                .name(userDto.getName())
-                .nickName(userDto.getNickName())
-                .createDate(userDto.getCreateDate())
+                .id(userInfo.getId())
+                .pwd(userInfo.getPwd())
+                .usePwd(userInfo.getUsePwd())
+                .name(userInfo.getName())
+                .nickName(userInfo.getNickName())
+                .createDate(userInfo.getCreateDate())
+                .build();
+    }
+
+    public static User of(UserVO userVO){
+        return User.builder()
+                .idx(userVO.getIdx())
+                .id(userVO.getId())
+                .pwd(userVO.getPwd())
+                .usePwd(userVO.getUsePwd())
+                .name(userVO.getName())
+                .nickName(userVO.getNickName())
                 .build();
     }
 }
