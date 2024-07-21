@@ -3,7 +3,8 @@ package com.chatforyou.io.controller;
 import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
 import com.chatforyou.io.client.Recording;
-import com.chatforyou.io.services.AuthService;
+import com.chatforyou.io.config.SecurityConfig;
+import com.chatforyou.io.services.impl.AuthServiceImpl;
 import com.chatforyou.io.services.OpenViduService;
 import com.chatforyou.io.services.ProxyService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,7 +34,7 @@ public class RecordingController {
 	private OpenViduService openviduService;
 
 	@Autowired
-	private AuthService authService;
+	private AuthServiceImpl authServiceImpl;
 
 	@Autowired
 	private ProxyService proxyService;
@@ -42,7 +43,7 @@ public class RecordingController {
 	public ResponseEntity<?> getRecordings(
 			@CookieValue(name = OpenViduService.MODERATOR_TOKEN_NAME, defaultValue = "") String moderatorToken,
 			@CookieValue(name = OpenViduService.PARTICIPANT_TOKEN_NAME, defaultValue = "") String participantToken,
-			@CookieValue(name = AuthService.ADMIN_COOKIE_NAME, defaultValue = "") String adminToken) {
+			@CookieValue(name = SecurityConfig.ADMIN_COOKIE_NAME, defaultValue = "") String adminToken) {
 		try {
 			boolean IS_RECORDING_ENABLED = CALL_RECORDING.toUpperCase().equals("ENABLED");
 			String sessionId = "";
@@ -53,7 +54,7 @@ public class RecordingController {
 			}
 			boolean isModeratorSessionValid = openviduService.isModeratorSessionValid(sessionId, moderatorToken);
 			boolean isParticipantSessionValid = openviduService.isParticipantSessionValid(sessionId, participantToken);
-			boolean isAdminSessionValid = authService.isAdminSessionValid(adminToken);
+			boolean isAdminSessionValid = authServiceImpl.isAdminSessionValid(adminToken);
 
 			if (!IS_RECORDING_ENABLED) {
 			    String message = "Recording is disabled";
@@ -173,7 +174,7 @@ public class RecordingController {
 	@DeleteMapping("/delete/{recordingId}")
 	public ResponseEntity<?> deleteRecording(@PathVariable String recordingId,
 			@CookieValue(name = OpenViduService.MODERATOR_TOKEN_NAME, defaultValue = "") String moderatorToken,
-			@CookieValue(name = AuthService.ADMIN_COOKIE_NAME, defaultValue = "") String adminToken) {
+			@CookieValue(name = SecurityConfig.ADMIN_COOKIE_NAME, defaultValue = "") String adminToken) {
 		try {
 
 			if (recordingId.isEmpty()) {
@@ -182,7 +183,7 @@ public class RecordingController {
 
 			List<Recording> recordings = new ArrayList<Recording>();
 			String sessionId = openviduService.getSessionIdFromRecordingId(recordingId);
-			boolean isAdminSessionValid = authService.isAdminSessionValid(adminToken);
+			boolean isAdminSessionValid = authServiceImpl.isAdminSessionValid(adminToken);
 			boolean isModeratorSessionValid = openviduService.isModeratorSessionValid(sessionId, moderatorToken);
 
 			if(!(isModeratorSessionValid || isAdminSessionValid)) {
@@ -220,7 +221,7 @@ public class RecordingController {
 	public ResponseEntity<?> getRecording(@PathVariable String recordingId, @PathVariable String extension,
 										  @CookieValue(name = OpenViduService.MODERATOR_TOKEN_NAME, defaultValue = "") String moderatorToken,
 										  @CookieValue(name = OpenViduService.PARTICIPANT_TOKEN_NAME, defaultValue = "") String participantToken,
-										  @CookieValue(name = AuthService.ADMIN_COOKIE_NAME, defaultValue = "") String sessionToken,
+										  @CookieValue(name = SecurityConfig.ADMIN_COOKIE_NAME, defaultValue = "") String sessionToken,
 										  HttpServletRequest req, HttpServletResponse res) {
 
 		if (recordingId.isEmpty()) {
@@ -228,7 +229,7 @@ public class RecordingController {
 		}
 
 		String sessionId = this.openviduService.getSessionIdFromRecordingId(recordingId);
-		boolean isAdminSessionValid = authService.isAdminSessionValid(sessionToken);
+		boolean isAdminSessionValid = authServiceImpl.isAdminSessionValid(sessionToken);
 		boolean isModeratorSessionValid = openviduService.isModeratorSessionValid(sessionId, moderatorToken);
 		boolean isParticipantSessionValid = openviduService.isParticipantSessionValid(sessionId, participantToken);
 		if (!sessionId.isEmpty() && (isModeratorSessionValid || isParticipantSessionValid || isAdminSessionValid)) {

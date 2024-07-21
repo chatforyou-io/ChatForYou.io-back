@@ -21,7 +21,7 @@ import java.util.Arrays;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
+	public static final String ADMIN_COOKIE_NAME = "ovCallAdminToken";
 	@Value("${CALL_USER}")
 	private String CALL_USER;
 

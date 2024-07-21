@@ -3,17 +3,25 @@ package com.chatforyou.io.controller;
 import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
 import com.chatforyou.io.client.Recording;
+import com.chatforyou.io.config.SecurityConfig;
 import com.chatforyou.io.models.AdminSessionData;
+import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.services.AuthService;
+import com.chatforyou.io.services.MailService;
+import com.chatforyou.io.services.impl.AuthServiceImpl;
 import com.chatforyou.io.services.OpenViduService;
+import com.chatforyou.io.services.UserService;
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +30,7 @@ import java.util.UUID;
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("auth")
+@RequiredArgsConstructor
 public class AuthController {
 
 	// 관리자 쿠키의 최대 유효 시간 (24시간)
@@ -39,33 +48,10 @@ public class AuthController {
 	@Value("${CALL_OPENVIDU_CERTTYPE}")
 	private String CALL_OPENVIDU_CERTTYPE;
 
-	@Autowired
-	private OpenViduService openviduService;
-
-	@Autowired
-	private AuthService authService;
-
-	/**
-	 * 사용자 로그인 처리 메서드
-	 *
-	 * @param params 요청 본문에서 받은 사용자명과 비밀번호
-	 * @return 로그인 성공 여부에 따른 응답 (HTTP 상태 코드 포함)
-	 */
-	@PostMapping("/login")
-	public ResponseEntity<?> login(@RequestBody(required = true) Map<String, String> params) {
-
-		// 요청으로부터 사용자명과 비밀번호를 가져옴
-		String username = params.get("username");
-		String password = params.get("password");
-
-		// 환경 변수에 저장된 사용자명과 비밀번호와 일치하는지 확인
-		if (username.equals(CALL_USER) && password.equals(CALL_SECRET)) {
-			System.out.println("Login succeeded");
-			return new ResponseEntity<>("", HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
-		}
-	}
+	private final OpenViduService openviduService;
+	private final AuthService authService;
+	private final UserService userService;
+	private final MailService mailService;
 
 	/**
 	 * 관리자 로그인 처리 메서드
@@ -77,7 +63,7 @@ public class AuthController {
 	 */
 	@PostMapping("/admin/login")
 	public ResponseEntity<?> adminLogin(@RequestBody(required = true) Map<String, String> params,
-										@CookieValue(name = AuthService.ADMIN_COOKIE_NAME, defaultValue = "") String adminToken,
+										@CookieValue(name = SecurityConfig.ADMIN_COOKIE_NAME, defaultValue = "") String adminToken,
 										HttpServletResponse res) {
 
 		String message = "";
@@ -98,7 +84,7 @@ public class AuthController {
 					String id = UUID.randomUUID().toString();
 
 					// 관리자 쿠키 생성 및 설정
-					Cookie cookie = new Cookie(AuthService.ADMIN_COOKIE_NAME, id);
+					Cookie cookie = new Cookie(SecurityConfig.ADMIN_COOKIE_NAME, id);
 					cookie.setPath("/");
 					cookie.setMaxAge(cookieAdminMaxAge);
 					cookie.setSecure(CALL_OPENVIDU_CERTTYPE.equals("selfsigned"));
@@ -117,7 +103,7 @@ public class AuthController {
 
 					// 새로운 관리자 세션 데이터를 저장
 					AdminSessionData data = new AdminSessionData(System.currentTimeMillis() + cookieAdminMaxAge * 1000);
-					authService.adminSessions.put(id, data);
+					authService.putAdminSession(id, data);
 				}
 				// 모든 녹화 정보를 가져옴
 				List<Recording> recordings = openviduService.listAllRecordings();
@@ -144,7 +130,6 @@ public class AuthController {
 			System.err.println(message);
 			return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
 		}
-
 	}
 
 	/**
@@ -156,20 +141,44 @@ public class AuthController {
 	 * @return 로그아웃 성공 시 빈 응답
 	 */
 	@PostMapping("/admin/logout")
-	public ResponseEntity<Void> adminLogout(@CookieValue(name = AuthService.ADMIN_COOKIE_NAME, defaultValue = "") String adminToken,
-											HttpServletRequest req,
+	public ResponseEntity<Void> adminLogout(@CookieValue(name = SecurityConfig.ADMIN_COOKIE_NAME, defaultValue = "") String adminToken,
 											HttpServletResponse res) {
 
 		// 관리자 세션 토큰을 세션 목록에서 제거
-		authService.adminSessions.remove(adminToken);
-
+		authService.delAdminSession(adminToken);
 		// 관리자 쿠키 무효화
-		Cookie cookie = new Cookie(AuthService.ADMIN_COOKIE_NAME, "");
+		Cookie cookie = new Cookie(SecurityConfig.ADMIN_COOKIE_NAME, "");
 		cookie.setPath("/");
 		cookie.setMaxAge(0);
 		res.addCookie(cookie);
 
 		return ResponseEntity.ok().build();
+	}
+
+	@GetMapping("/validate"+"/{email}")
+	public ResponseEntity<?> checkEmailValidation(
+			@PathVariable("email") String email,
+			HttpServletResponse response) throws MessagingException, UnsupportedEncodingException {
+		// 이메일 중복 체크
+		boolean isDuplicate = userService.validateStrByType(ValidateType.ID, email);
+		if (isDuplicate) {
+			return new ResponseEntity<>("already exist email", HttpStatus.BAD_REQUEST);
+		}
+
+		// 이메일 전송
+		String mailCode = mailService.sendEmailValidate(email);
+
+		// mailCode를 쿠키로 설정
+		Cookie cookie = new Cookie("mailCode", mailCode);
+		cookie.setHttpOnly(true); // client 가 js 로 접근 할 수 없도록 체크
+		cookie.setSecure(true); // HTTPS를 사용할 경우에만
+		cookie.setPath("/");
+		cookie.setMaxAge(60 * 5); // 쿠키 유효 기간 설정 (예: 10분)
+		response.addCookie(cookie);
+
+		Map<String, String> result = new HashMap<>();
+		result.put("result", "send success");
+		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
 
 }
