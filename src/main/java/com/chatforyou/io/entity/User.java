@@ -5,6 +5,7 @@ import com.chatforyou.io.models.out.UserInfo;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -66,6 +67,19 @@ public class User {
                 .usePwd(userVO.getUsePwd())
                 .name(userVO.getName())
                 .nickName(userVO.getNickName())
+                .createDate(new Date().getTime())
+                .build();
+    }
+
+    public static User ofUpdated(UserVO userVO, User user){
+        return User.builder()
+                .idx(user.getIdx())
+                .id(user.getId())
+                .pwd(userVO.getPwd())
+                .usePwd(user.getUsePwd())
+                .name(user.getName())
+                .nickName(userVO.getNickName())
+                .createDate(user.getCreateDate())
                 .build();
     }
 }

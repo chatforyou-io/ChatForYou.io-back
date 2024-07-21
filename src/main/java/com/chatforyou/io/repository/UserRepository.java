@@ -10,20 +10,27 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findUserByIdx(Long idx);
+    Optional<User> findByIdAndPwd(String id, String pwd);
+    Optional<User> findUserById(String id);
+
     @Transactional
     @Modifying
-    @Query("update User u set u.nickName=:nickName, u.pwd=:pwd where u.idx=:idx")
-    User updateUserByIdx(String nickName, String pwd, Long idx);
-
-    User getUserByIdx(Long idx);
+    @Query("update User u set u.nickName=:nickName, u.pwd=:pwd where u.id=:id")
+    int updateUserById(String id, String nickName, String pwd);
 
     @Transactional
-    @Query("delete User u where u.idx=:idx and u.id=:id")
-    boolean deleteUserByIdxAndId(Long idx, String id);
+    @Modifying
+    @Query("delete from User u where u.idx=:idx and u.id=:id")
+    int deleteUserByIdxAndId(Long idx, String id);
 
-    User getUserById(String id);
 
     @Transactional
     @Query("SELECT CASE WHEN COUNT(u) > 0 THEN TRUE ELSE FALSE END FROM User u WHERE u.nickName = :nickName")
-    boolean existsByNickName(@Param("nickName") String nickName);
+    boolean checkExistsByNickName(@Param("nickName") String nickName);
+
+    @Transactional
+    @Query("SELECT CASE WHEN COUNT(u) > 0 THEN TRUE ELSE FALSE END FROM User u WHERE u.id = :id")
+    boolean checkExistsById(@Param("id") String id);
+
 }
