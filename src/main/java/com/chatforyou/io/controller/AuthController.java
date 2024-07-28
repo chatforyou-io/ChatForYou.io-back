@@ -8,14 +8,14 @@ import com.chatforyou.io.models.AdminSessionData;
 import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.MailService;
-import com.chatforyou.io.services.impl.AuthServiceImpl;
 import com.chatforyou.io.services.OpenViduService;
 import com.chatforyou.io.services.UserService;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.BadRequestException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,10 +48,36 @@ public class AuthController {
 	@Value("${CALL_OPENVIDU_CERTTYPE}")
 	private String CALL_OPENVIDU_CERTTYPE;
 
-	private final OpenViduService openviduService;
-	private final AuthService authService;
-	private final UserService userService;
 	private final MailService mailService;
+	private final UserService userService;
+
+	@Autowired
+	private OpenViduService openviduService;
+
+	@Autowired
+	private AuthService authService;
+
+//	/** TODO 테스트 후 삭제 예정
+//	 * 테스트용 사용자 로그인 처리 메서드
+//	 *
+//	 * @param params 요청 본문에서 받은 사용자명과 비밀번호
+//	 * @return 로그인 성공 여부에 따른 응답 (HTTP 상태 코드 포함)
+//	 */
+//	@PostMapping("/login")
+//	public ResponseEntity<?> login(@RequestBody(required = true) Map<String, String> params) {
+//
+//		// 요청으로부터 사용자명과 비밀번호를 가져옴
+//		String username = params.get("username");
+//		String password = params.get("password");
+//
+//		// 환경 변수에 저장된 사용자명과 비밀번호와 일치하는지 확인
+//		if (username.equals(CALL_USER) && password.equals(CALL_SECRET)) {
+//			System.out.println("Login succeeded");
+//			return new ResponseEntity<>("", HttpStatus.OK);
+//		} else {
+//			return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+//		}
+//	}
 
 	/**
 	 * 관리자 로그인 처리 메서드
@@ -155,14 +181,14 @@ public class AuthController {
 		return ResponseEntity.ok().build();
 	}
 
-	@GetMapping("/validate"+"/{email}")
+	@GetMapping("/validate")
 	public ResponseEntity<?> checkEmailValidation(
-			@PathVariable("email") String email,
-			HttpServletResponse response) throws MessagingException, UnsupportedEncodingException {
+			@RequestParam("email") String email,
+			HttpServletResponse response) throws MessagingException, UnsupportedEncodingException, BadRequestException {
 		// 이메일 중복 체크
 		boolean isDuplicate = userService.validateStrByType(ValidateType.ID, email);
 		if (isDuplicate) {
-			return new ResponseEntity<>("already exist email", HttpStatus.BAD_REQUEST);
+			throw new BadRequestException("already exist user ID");
 		}
 
 		// 이메일 전송
@@ -173,12 +199,11 @@ public class AuthController {
 		cookie.setHttpOnly(true); // client 가 js 로 접근 할 수 없도록 체크
 		cookie.setSecure(true); // HTTPS를 사용할 경우에만
 		cookie.setPath("/");
-		cookie.setMaxAge(60 * 5); // 쿠키 유효 기간 설정 (예: 10분)
+		cookie.setMaxAge(60 * 5); // 쿠키 유효 기간 설정 (예: 5분)
 		response.addCookie(cookie);
 
 		Map<String, String> result = new HashMap<>();
 		result.put("result", "send success");
 		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
-
 }

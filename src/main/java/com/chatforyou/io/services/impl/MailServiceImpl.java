@@ -1,7 +1,7 @@
 package com.chatforyou.io.services.impl;
 
 import com.chatforyou.io.services.MailService;
-import com.google.common.base.Charsets;
+import com.chatforyou.io.utils.ThreadUtils;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -28,13 +28,10 @@ public class MailServiceImpl implements MailService {
         String ePw = createKey();
         String bodyText = createBodyText(ePw);
         MimeMessage message = createMessage(email, bodyText);
-        try {
-            mailSender.send(message);
-            mailValidateInfo.put(email, ePw);
-        } catch (Exception e) {
-            log.error("mail Sender Exception :: {}", e.getStackTrace());
-            throw new RuntimeException();
-        }
+
+        // send 라는 job 을 최대 5번, 1000ms 마다 반복
+        ThreadUtils.runTask(()-> mailSender.send(message), 5, 1000, "Mail");
+        mailValidateInfo.put(email, ePw);
 
         return ePw;
     }
