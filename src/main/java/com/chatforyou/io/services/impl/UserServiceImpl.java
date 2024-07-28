@@ -34,7 +34,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean validateStrByType(ValidateType type, String str) {
+    public boolean validateStrByType(ValidateType type, String str) throws BadRequestException {
         switch (type) {
             case ID:
                 return userRepository.checkExistsById(str);
@@ -49,19 +49,26 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserInfo saveUser(UserVO userVo) throws BadRequestException {
-        if (Objects.isNull(userVo.getPwd()) || Objects.isNull(userVo.getConfirmPwd())) {
+    public UserInfo saveUser(UserVO userVO) throws BadRequestException {
+        if (Objects.isNull(userVO.getPwd()) || Objects.isNull(userVO.getConfirmPwd())) {
             throw new BadRequestException("can not confirm user Password");
         }
-        if (!userVo.getPwd().equals(userVo.getConfirmPwd())) {
+        if (!userVO.getPwd().equals(userVO.getConfirmPwd())) {
             throw new BadRequestException("can not confirm user Password");
         }
-        User userEntity = User.of(userVo);
+
+        if (this.validateStrByType(ValidateType.ID, userVO.getId())) {
+            throw new BadRequestException("Already Exist User ID");
+        }
+        User userEntity = User.of(userVO);
         return UserInfo.of(userRepository.saveAndFlush(userEntity));
     }
 
     @Override
-    public UserInfo updateUser(UserVO userVO) {
+    public UserInfo updateUser(UserVO userVO) throws BadRequestException {
+        if (!userVO.getPwd().equals(userVO.getConfirmPwd())) {
+            throw new BadRequestException("can not confirm user Password");
+        }
         Optional<User> user = userRepository.findUserById(userVO.getId());
         if (user.isEmpty()) {
             throw new EntityNotFoundException("can not find user");

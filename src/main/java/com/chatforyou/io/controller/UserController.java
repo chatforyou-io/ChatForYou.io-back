@@ -27,7 +27,7 @@ public class UserController {
         Map<String, Object> response = new HashMap<>();
         UserInfo userInfo = userService.findUserById(id);
         response.put("result", "success");
-        response.put("user_data", userInfo);
+        response.put("userData", userInfo);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -46,15 +46,18 @@ public class UserController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
-        response.put("user_data", userService.getUserInfo(id, password));
+        response.put("userData", userService.getUserInfo(id, password));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @GetMapping("/check_nick_name")
-    public ResponseEntity<Map<String, Object>> checkNickName(@RequestParam String nickName){
+    @GetMapping("/check_nickname")
+    public ResponseEntity<Map<String, Object>> checkNickName(@RequestParam String nickName) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
-        response.put("isDuplicate", userService.validateStrByType(ValidateType.NICKNAME, nickName));
+        if (userService.validateStrByType(ValidateType.NICKNAME, nickName)) {
+            throw new BadRequestException("already exist user NickName");
+        }
+        response.put("userData", false);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -64,16 +67,16 @@ public class UserController {
         Map<String, Object> response = new HashMap<>();
         UserInfo userInfo = userService.saveUser(user);
         response.put("result", "success");
-        response.put("user_data", userInfo);
+        response.put("userData", userInfo);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
 
     @PatchMapping("/update")
     public ResponseEntity<Map<String, Object>> updateUser(@RequestBody UserVO user) throws BadRequestException {
-        Map<String, Object> response = new HashMap<String, Object>();
+        Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
-        response.put("updatedUser", userService.updateUser(user));
+        response.put("userData", userService.updateUser(user));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
