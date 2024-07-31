@@ -191,11 +191,11 @@ public class OpenViduService {
 			try {
 				Map<String, Object> params = new HashMap<String, Object>();
 				params.put("customSessionId", sessionId);
-//				RecordingProperties.Builder builder = new RecordingProperties.Builder();
-//				SessionProperties properties = SessionProperties.fromJson(params)
-//						.defaultRecordingProperties(builder.build())
-//						.build();
-				SessionProperties properties = SessionProperties.fromJson(params).build();
+				RecordingProperties.Builder builder = new RecordingProperties.Builder();
+				SessionProperties properties = SessionProperties.fromJson(params)
+						.defaultRecordingProperties(builder.build())
+						.build();
+//				SessionProperties properties = SessionProperties.fromJson(params).build();
 				Session session = openvidu.createSession(properties);
 				session.fetch();
 				return session;

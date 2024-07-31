@@ -36,7 +36,7 @@ public class RecordingProperties {
 		public static final Recording.OutputMode outputMode = Recording.OutputMode.COMPOSED;
 		public static final RecordingLayout recordingLayout = RecordingLayout.BEST_FIT;
 		public static final String resolution = "1280x720";
-		public static final Integer frameRate = 25;
+		public static final Integer frameRate = 30;
 		public static final Long shmSize = 536870912L;
 		public static final String customLayout = "";
 		public static final Boolean ignoreFailedStreams = false;
