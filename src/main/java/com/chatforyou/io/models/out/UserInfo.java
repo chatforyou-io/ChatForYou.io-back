@@ -39,7 +39,6 @@ public class UserInfo {
         return UserInfo.builder()
                 .idx(user.getIdx())
                 .id(user.getId())
-                .pwd(user.getPwd())
                 .usePwd(user.getUsePwd())
                 .name(user.getName())
                 .nickName(user.getNickName())

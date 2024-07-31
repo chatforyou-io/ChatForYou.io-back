@@ -2,6 +2,7 @@ package com.chatforyou.io.entity;
 
 import com.chatforyou.io.models.in.UserVO;
 import com.chatforyou.io.models.out.UserInfo;
+import com.chatforyou.io.utils.AuthUtils;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -63,7 +64,7 @@ public class User {
         return User.builder()
                 .idx(userVO.getIdx())
                 .id(userVO.getId())
-                .pwd(userVO.getPwd())
+                .pwd(AuthUtils.getEncodeStr(userVO.getPwd()))
                 .usePwd(userVO.getUsePwd())
                 .name(userVO.getName())
                 .nickName(userVO.getNickName())

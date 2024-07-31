@@ -24,12 +24,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("delete from User u where u.idx=:idx and u.id=:id")
     int deleteUserByIdxAndId(Long idx, String id);
 
-
-    @Transactional
     @Query("SELECT CASE WHEN COUNT(u) > 0 THEN TRUE ELSE FALSE END FROM User u WHERE u.nickName = :nickName")
     boolean checkExistsByNickName(@Param("nickName") String nickName);
 
-    @Transactional
     @Query("SELECT CASE WHEN COUNT(u) > 0 THEN TRUE ELSE FALSE END FROM User u WHERE u.id = :id")
     boolean checkExistsById(@Param("id") String id);
 

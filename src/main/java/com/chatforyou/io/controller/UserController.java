@@ -23,7 +23,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/info")
-    public ResponseEntity<Map<String, Object>> getUserInfo(@RequestParam String id){
+    public ResponseEntity<Map<String, Object>> getUserInfo(@RequestParam String id) {
         Map<String, Object> response = new HashMap<>();
         UserInfo userInfo = userService.findUserById(id);
         response.put("result", "success");

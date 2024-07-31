@@ -6,6 +6,7 @@ import com.chatforyou.io.models.in.UserVO;
 import com.chatforyou.io.models.out.UserInfo;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.UserService;
+import com.chatforyou.io.utils.AuthUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
@@ -95,8 +96,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserInfo getUserInfo(String id, String passwd) {
-        User user = userRepository.findByIdAndPwd(id, passwd)
-                .orElseThrow(() -> new EntityNotFoundException("can not find user"));
+        User user = userRepository.findByIdAndPwd(id, AuthUtils.getEncodeStr(passwd))
+                .orElseThrow(() -> new EntityNotFoundException("Invalid User Id or Password"));
         return UserInfo.of(user);
     }
 }
