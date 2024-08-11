@@ -3,7 +3,6 @@ package com.chatforyou.io.models.out;
 import com.chatforyou.io.client.Connection;
 import com.chatforyou.io.client.Publisher;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 import lombok.*;
@@ -16,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-public class ConnectionInfo {
+public class ConnectionOutVo {
     @SerializedName("connectionId")
     @JsonProperty("connectionId")
     private String connectionId;
@@ -52,16 +51,16 @@ public class ConnectionInfo {
     @JsonProperty("subscribers")
     private List<String> subscribers = new ArrayList<>();
 
-    public static ConnectionInfo of(Connection connection){
-        return ConnectionInfo.builder()
+    public static ConnectionOutVo of(Connection connection){
+        return ConnectionOutVo.builder()
                 .connectionId(connection.getConnectionId())
                 .status(connection.getStatus())
                 .createdAt(connection.createdAt())
                 .activeAt(connection.activeAt())
-                .location(connection.getLocation())
-                .ip(connection.getIp())
+//                .location(connection.getLocation())
+//                .ip(connection.getIp())
                 .platform(connection.getPlatform())
-                .clientData(connection.getClientData() != null ? new Gson().fromJson(connection.getClientData(), JsonObject.class) : new JsonObject())
+//                .clientData(connection.getClientData() != null ? new Gson().fromJson(connection.getClientData(), JsonObject.class) : new JsonObject())
                 .token(connection.getToken())
                 .subscribers(connection.getSubscribers())
                 .build();

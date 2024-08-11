@@ -13,20 +13,18 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class UserInfo {
-    private Long idx;
+@ToString
+public class UserOutVo {
 
     private String id;
 
     private String pwd;
 
-    private Boolean usePwd;
-
     private String name;
 
     private String nickName;
 
-    private Long createDate;
+    private List<User> friendList;
 
     // TODO 아래 3가지는 모두 output 모델로 변경할 것
     private Set<Board> boards;
@@ -35,11 +33,10 @@ public class UserInfo {
 
     private List<Social> socials;
 
-    public static UserInfo of(User user) {
-        return UserInfo.builder()
-                .idx(user.getIdx())
+    public static UserOutVo of(User user) {
+        return UserOutVo.builder()
                 .id(user.getId())
-                .usePwd(user.getUsePwd())
+                .pwd(user.getPwd())
                 .name(user.getName())
                 .nickName(user.getNickName())
                 .build();

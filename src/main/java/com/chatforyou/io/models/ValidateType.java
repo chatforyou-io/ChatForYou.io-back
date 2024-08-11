@@ -4,7 +4,8 @@ public enum ValidateType {
 
     ID(01),
     NICKNAME(02),
-    PASSWORD(03);
+    PASSWORD(03),
+    ;
 
     private final int code;
 

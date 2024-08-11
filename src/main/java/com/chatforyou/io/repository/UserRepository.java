@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
@@ -30,4 +31,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT CASE WHEN COUNT(u) > 0 THEN TRUE ELSE FALSE END FROM User u WHERE u.id = :id")
     boolean checkExistsById(@Param("id") String id);
 
+    @Query("SELECT u from User u join Friend f on u.idx = f.friendIdx where f.userIdx=:idx")
+    List<User> friendListByUserIdx(Long idx);
 }

@@ -1,8 +1,6 @@
 package com.chatforyou.io.entity;
 
-import com.chatforyou.io.models.in.UserVO;
-import com.chatforyou.io.models.out.UserInfo;
-import com.chatforyou.io.utils.AuthUtils;
+import com.chatforyou.io.models.in.UserInVo;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -43,43 +41,32 @@ public class User {
     @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
     private Set<Board> boards;
 
-    @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private Set<ChatRoom> chatRooms;
 
     @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
     private List<Social> socials;
 
-    public static User of(UserInfo userInfo){
+    public static User ofSave(UserInVo userInVO){
         return User.builder()
-                .id(userInfo.getId())
-                .pwd(userInfo.getPwd())
-                .usePwd(userInfo.getUsePwd())
-                .name(userInfo.getName())
-                .nickName(userInfo.getNickName())
-                .createDate(userInfo.getCreateDate())
-                .build();
-    }
-
-    public static User of(UserVO userVO){
-        return User.builder()
-                .idx(userVO.getIdx())
-                .id(userVO.getId())
-                .pwd(AuthUtils.getEncodeStr(userVO.getPwd()))
-                .usePwd(userVO.getUsePwd())
-                .name(userVO.getName())
-                .nickName(userVO.getNickName())
+                .idx(userInVO.getIdx())
+                .id(userInVO.getId())
+                .pwd(userInVO.getPwd())
+                .usePwd(userInVO.getUsePwd())
+                .name(userInVO.getName())
+                .nickName(userInVO.getNickName())
                 .createDate(new Date().getTime())
                 .build();
     }
 
-    public static User ofUpdated(UserVO userVO, User user){
+    public static User ofUpdate(UserInVo userInVO, User user){
         return User.builder()
                 .idx(user.getIdx())
                 .id(user.getId())
-                .pwd(userVO.getPwd())
+                .pwd(userInVO.getPwd())
                 .usePwd(user.getUsePwd())
                 .name(user.getName())
-                .nickName(userVO.getNickName())
+                .nickName(userInVO.getNickName())
                 .createDate(user.getCreateDate())
                 .build();
     }

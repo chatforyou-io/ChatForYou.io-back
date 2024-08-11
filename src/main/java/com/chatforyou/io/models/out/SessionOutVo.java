@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class SessionInfo {
+public class SessionOutVo {
     @SerializedName("sessionId")
     @JsonProperty("sessionId")
     private String sessionId;
@@ -23,7 +23,7 @@ public class SessionInfo {
     private long createdAt;
     @SerializedName("connections")
     @JsonProperty("connections")
-    private Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
+    private Map<String, ConnectionOutVo> connections = new ConcurrentHashMap<>();
     @SerializedName("recording")
     @JsonProperty("recording")
     private boolean recording = false;
@@ -31,8 +31,8 @@ public class SessionInfo {
     @JsonProperty("broadcasting")
     private boolean broadcasting = false;
 
-    public static SessionInfo of(Session session, Map<String, ConnectionInfo> connections){
-        return SessionInfo.builder()
+    public static SessionOutVo of(Session session, Map<String, ConnectionOutVo> connections){
+        return SessionOutVo.builder()
                 .sessionId(session.getSessionId())
                 .connections(connections)
                 .createdAt(session.createdAt())
