@@ -1,11 +1,10 @@
 package com.chatforyou.io.controller;
 
 import com.chatforyou.io.models.ValidateType;
-import com.chatforyou.io.models.in.UserVO;
-import com.chatforyou.io.models.out.UserInfo;
-import com.chatforyou.io.services.OpenViduService;
+import com.chatforyou.io.models.in.UserInVo;
+import com.chatforyou.io.models.out.UserOutVo;
+import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.UserService;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
@@ -19,34 +18,21 @@ import java.util.Map;
 @RequestMapping("/user")
 @RequiredArgsConstructor
 public class UserController {
+    /**
+     * 이메일 정규식
+     * 비밀번호 최소 8자 {영문 특수문자} 포함
+     */
 
     private final UserService userService;
+    private final AuthService authService;
 
     @GetMapping("/info")
-    public ResponseEntity<Map<String, Object>> getUserInfo(@RequestParam String id) {
+    public ResponseEntity<Map<String, Object>> getUserInfo(
+            @RequestParam String id) {
         Map<String, Object> response = new HashMap<>();
-        UserInfo userInfo = userService.findUserById(id);
+        UserOutVo userOutVo = userService.findUserById(id);
         response.put("result", "success");
-        response.put("userData", userInfo);
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
-
-    /**
-     * 사용자 로그인 처리 메서드
-     *
-     * @param params 요청 본문에서 받은 사용자명과 비밀번호
-     * @return 로그인 성공 여부에 따른 응답 (HTTP 상태 코드 포함)
-     */
-    @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody(required = true) Map<String, String> params) {
-
-        // 요청으로부터 사용자명과 비밀번호를 가져옴
-        String id = params.get("id");
-        String password = params.get("password");
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("result", "success");
-        response.put("userData", userService.getUserInfo(id, password));
+        response.put("userData", userOutVo);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -54,7 +40,7 @@ public class UserController {
     public ResponseEntity<Map<String, Object>> checkNickName(@RequestParam String nickName) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
-        if (userService.validateStrByType(ValidateType.NICKNAME, nickName)) {
+        if (authService.validateStrByType(ValidateType.NICKNAME, nickName)) {
             throw new BadRequestException("already exist user NickName");
         }
         response.put("userData", false);
@@ -63,17 +49,17 @@ public class UserController {
 
 
     @PostMapping("/create")
-    public ResponseEntity<Map<String, Object>> createUser(@RequestBody UserVO user) throws BadRequestException {
+    public ResponseEntity<Map<String, Object>> createUser(@RequestBody UserInVo user) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
-        UserInfo userInfo = userService.saveUser(user);
+        UserOutVo userOutVo = userService.saveUser(user);
         response.put("result", "success");
-        response.put("userData", userInfo);
+        response.put("userData", userOutVo);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
 
     @PatchMapping("/update")
-    public ResponseEntity<Map<String, Object>> updateUser(@RequestBody UserVO user) throws BadRequestException {
+    public ResponseEntity<Map<String, Object>> updateUser(@RequestBody UserInVo user) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         response.put("userData", userService.updateUser(user));
@@ -81,7 +67,7 @@ public class UserController {
     }
 
     @DeleteMapping("/delete")
-    public ResponseEntity<Map<String, Object>> deleteUser(@RequestBody UserVO user) throws BadRequestException {
+    public ResponseEntity<Map<String, Object>> deleteUser(@RequestBody UserInVo user) throws BadRequestException {
         Map<String, Object> response = new HashMap<String, Object>();
         boolean result = userService.deleteUser(user);
         if (result) {

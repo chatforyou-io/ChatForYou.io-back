@@ -29,7 +29,7 @@ import java.util.UUID;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -51,11 +51,9 @@ public class AuthController {
 	private final MailService mailService;
 	private final UserService userService;
 
-	@Autowired
-	private OpenViduService openviduService;
+	private final OpenViduService openviduService;
 
-	@Autowired
-	private AuthService authService;
+	private final AuthService authService;
 
 //	/** TODO 테스트 후 삭제 예정
 //	 * 테스트용 사용자 로그인 처리 메서드
@@ -78,6 +76,22 @@ public class AuthController {
 //			return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
 //		}
 //	}
+
+	/**
+	 * 사용자 로그인 처리 메서드
+	 * @param id 사용자 아이디
+	 * @param password 사용자 패스워드
+	 * @return 로그인 성공 여부에 따른 응답 (HTTP 상태 코드 포함)
+	 */
+	@PostMapping("/login")
+	public ResponseEntity<Map<String, Object>> login(@RequestParam String id, @RequestParam String password) {
+
+		// 요청으로부터 사용자명과 비밀번호를 가져옴
+		Map<String, Object> response = new HashMap<>();
+		response.put("result", "success");
+		response.put("userData", authService.getLoginUserInfo(id, password));
+		return new ResponseEntity<>(response, HttpStatus.OK);
+	}
 
 	/**
 	 * 관리자 로그인 처리 메서드
@@ -186,7 +200,7 @@ public class AuthController {
 			@RequestParam("email") String email,
 			HttpServletResponse response) throws MessagingException, UnsupportedEncodingException, BadRequestException {
 		// 이메일 중복 체크
-		boolean isDuplicate = userService.validateStrByType(ValidateType.ID, email);
+		boolean isDuplicate = authService.validateStrByType(ValidateType.ID, email);
 		if (isDuplicate) {
 			throw new BadRequestException("already exist user ID");
 		}
