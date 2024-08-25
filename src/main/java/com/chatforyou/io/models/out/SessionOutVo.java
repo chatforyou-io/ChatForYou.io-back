@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.gson.annotations.SerializedName;
 import lombok.*;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -14,7 +16,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class SessionOutVo {
+@ToString
+public class SessionOutVo implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     @SerializedName("sessionId")
     @JsonProperty("sessionId")
     private String sessionId;
@@ -39,6 +44,5 @@ public class SessionOutVo {
                 .recording(session.isBeingRecorded())
                 .broadcasting(session.isBeingBroadcasted())
                 .build();
-
     }
 }
