@@ -1,28 +1,51 @@
 package com.chatforyou.io.services;
 
 
+import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.client.*;
+import com.chatforyou.io.entity.ChatRoom;
+import com.chatforyou.io.entity.User;
+import com.chatforyou.io.models.DataType;
+import com.chatforyou.io.models.OpenViduData;
 import com.chatforyou.io.models.RecordingData;
 import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.SessionOutVo;
+import com.chatforyou.io.utils.RedisUtils;
 import com.chatforyou.io.utils.RetryException;
 import com.chatforyou.io.utils.RetryOptions;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.Cookie;
+import lombok.RequiredArgsConstructor;
+import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@RequiredArgsConstructor
 public class OpenViduService {
 
 	public static final String MODERATOR_TOKEN_NAME = "ovCallModeratorToken";
 	public static final String PARTICIPANT_TOKEN_NAME = "ovCallParticipantToken";
-	public Map<String, RecordingData> moderatorsCookieMap = new HashMap<String, RecordingData>();
-	public Map<String, List<String>> participantsCookieMap = new HashMap<String, List<String>>();
+	private final RedisUtils redisUtils;
+
+	@Value("${CALL_RECORDING}")
+	private String CALL_RECORDING;
+
+	@Value("${CALL_BROADCAST}")
+	private String CALL_BROADCAST;
+
+	private final int cookieAdminMaxAge = 24 * 60 * 60;
+
+	public static Map<String, RecordingData> moderatorsCookieMap = new ConcurrentHashMap<>();
+	public static Map<String, List<String>> participantsCookieMap = new ConcurrentHashMap<>();
 
 	@Value("${OPENVIDU_URL}")
 	public String OPENVIDU_URL;
@@ -44,12 +67,199 @@ public class OpenViduService {
 		return "Basic " + new String(encodedString);
 	}
 
-	public boolean isPRO() {
-		return this.edition.toUpperCase().equals("PRO");
+	public OpenViduData createOpenViduRoom(ChatRoom chatRoom) throws BadRequestException {
+		OpenViduData openViduData = null;
+
+		try {
+			long date = -1;
+			Long userIdx = chatRoom.getUser().getIdx();
+			String sessionId = chatRoom.getSessionId();
+
+			Session openViduSession = this.createSession(sessionId);
+
+			String MODERATOR_TOKEN_NAME = OpenViduService.MODERATOR_TOKEN_NAME;
+			String PARTICIPANT_TOKEN_NAME = OpenViduService.PARTICIPANT_TOKEN_NAME;
+			boolean IS_RECORDING_ENABLED = CALL_RECORDING.toUpperCase().equals("ENABLED");
+			boolean IS_BROADCAST_ENABLED = CALL_BROADCAST.toUpperCase().equals("ENABLED");
+			boolean PRIVATE_FEATURES_ENABLED = IS_RECORDING_ENABLED || IS_BROADCAST_ENABLED;
+
+			boolean hasModeratorValidToken = this.isModeratorSessionValid(sessionId, "");
+			boolean hasParticipantValidToken = this.isParticipantSessionValid(sessionId, "");
+			boolean hasValidToken = hasModeratorValidToken || hasParticipantValidToken;
+			ConnectionOutVo cameraConnection = this.createConnection(openViduSession, userIdx, OpenViduRole.MODERATOR, "camera");
+			ConnectionOutVo screenConnection = this.createConnection(openViduSession, userIdx, OpenViduRole.MODERATOR, "screen");
+
+			openViduData = OpenViduData.builder()
+					.creator(chatRoom.getUser().getNickName())
+					.recordingEnabled(IS_RECORDING_ENABLED)
+					.isRecordingActive(openViduSession.isBeingRecorded())
+					.broadcastingEnabled(IS_BROADCAST_ENABLED)
+					.isBroadcastingActive(openViduSession.isBeingBroadcasted())
+					.session(SessionOutVo.of(openViduSession, getConnectionInfoList(openViduSession.getConnections())))
+					.build();
+
+			if (!hasValidToken && PRIVATE_FEATURES_ENABLED) {
+				/**
+				 * ! *********** WARN *********** !
+				 *
+				 해당 코드에서는 세션 녹화 및 스트리밍을 관리할 수 있는 사용자를 식별하기 위해 세션 생성자에게 토큰이 포함된 쿠키를 전송함
+				 이때 쿠키와 세션 간의 관계는 백엔드 메모리에 저장.
+				 아래 코드는 기본적인 인증 및 권한 부여 코드로 실제 운영 환경에서 사용시 변경 필요!
+				 *
+				 * ! *********** WARN *********** !
+				 **/
+				String uuid = UUID.randomUUID().toString();
+				date = System.currentTimeMillis();
+				initSessionCreator(sessionId, cameraConnection.getToken(), uuid, date);
+
+			}
+
+		} catch (OpenViduJavaClientException | OpenViduHttpException e) {
+
+			if (e.getMessage() != null && Integer.parseInt(e.getMessage()) == 501) {
+				System.err.println("OpenVidu Server recording module is disabled");
+				throw new BadRequestException("OpenVidu Server recording module is disabled");
+//				return new ResponseEntity<>(response, HttpStatus.OK);
+			} else if (e.getMessage() != null && Integer.parseInt(e.getMessage()) == 401) {
+				System.err.println("OpenVidu credentials are wrong.");
+				throw new HttpClientErrorException(HttpStatus.UNAUTHORIZED);
+//				return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+			} else {
+				e.printStackTrace();
+				System.err.println(e.getMessage());
+				throw new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR);
+//				return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.err.println(e.getMessage());
+			throw new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR);
+//			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		redisUtils.setObject(DataType.redisDataKey(chatRoom.getSessionId(), DataType.OPENVIDU), openViduData);
+		redisUtils.setObject(DataType.redisDataKey(chatRoom.getSessionId(), DataType.USER_COUNT), 0);
+		return openViduData;
 	}
 
-	public boolean isCE() {
-		return this.edition.toUpperCase().equals("CE");
+	public OpenViduData joinOpenviduRoom(String sessionId, User joinUser) throws BadRequestException {
+		Session openViduSession = this.openvidu.getActiveSession(sessionId);
+		OpenViduData openViduData = redisUtils.getObject(DataType.redisDataKey(sessionId, DataType.OPENVIDU), OpenViduData.class);
+		if (Objects.isNull(openViduSession) || Objects.isNull(openViduData)) {
+			throw new BadRequestException("Unknown Openvidu Session");
+		}
+		String creator = openViduData.getCreator();
+		try {
+			long date = -1;
+			// sessionId 는 일종의 roomId
+//			if (params.containsKey("sessionId")) {
+//				sessionId = params.get("sessionId").toString();
+//			} else if (params.containsKey("customSessionId))")) {
+//				sessionId = params.get("customSessionId").toString();
+//			}
+//
+//			if (params.containsKey("nickName")) {
+//				nickName = params.get("nickName").toString();
+//			}
+
+			String MODERATOR_TOKEN_NAME = OpenViduService.MODERATOR_TOKEN_NAME;
+			String PARTICIPANT_TOKEN_NAME = OpenViduService.PARTICIPANT_TOKEN_NAME;
+			boolean IS_RECORDING_ENABLED = CALL_RECORDING.toUpperCase().equals("ENABLED");
+			boolean IS_BROADCAST_ENABLED = CALL_BROADCAST.toUpperCase().equals("ENABLED");
+			boolean PRIVATE_FEATURES_ENABLED = IS_RECORDING_ENABLED || IS_BROADCAST_ENABLED;
+
+			boolean hasModeratorValidToken = this.isModeratorSessionValid(sessionId, "");
+			boolean hasParticipantValidToken = this.isParticipantSessionValid(sessionId, "");
+			boolean hasValidToken = hasModeratorValidToken || hasParticipantValidToken;
+			boolean iAmTheFirstConnection = !StringUtil.isNullOrEmpty(creator) && creator.equals(joinUser.getNickName());
+			boolean isSessionCreator = hasModeratorValidToken || iAmTheFirstConnection;
+			OpenViduRole role = isSessionCreator ? OpenViduRole.MODERATOR : OpenViduRole.PUBLISHER;
+			ConnectionOutVo cameraConnection = this.createConnection(openViduSession, joinUser.getIdx(), role, "camera");
+			ConnectionOutVo screenConnection = this.createConnection(openViduSession, joinUser.getIdx(), role, "screen");
+
+			if (!hasValidToken && PRIVATE_FEATURES_ENABLED) {
+				/**
+				 * ! *********** WARN *********** !
+				 *
+				 해당 코드에서는 세션 녹화 및 스트리밍을 관리할 수 있는 사용자를 식별하기 위해 세션 생성자에게 토큰이 포함된 쿠키를 전송함
+				 이때 쿠키와 세션 간의 관계는 백엔드 메모리에 저장.
+				 아래 코드는 기본적인 인증 및 권한 부여 코드로 실제 운영 환경에서 사용시 변경 필요!
+				 *
+				 * ! *********** WARN *********** !
+				 **/
+				String uuid = UUID.randomUUID().toString();
+				date = System.currentTimeMillis();
+				initSessionParticipant(sessionId, cameraConnection.getToken(), uuid, date);
+			}
+
+		} catch (OpenViduJavaClientException | OpenViduHttpException e) {
+
+			if (e.getMessage() != null && Integer.parseInt(e.getMessage()) == 501) {
+				System.err.println("OpenVidu Server recording module is disabled");
+				throw new BadRequestException("OpenVidu Server recording module is disabled");
+//				return new ResponseEntity<>(response, HttpStatus.OK);
+			} else if (e.getMessage() != null && Integer.parseInt(e.getMessage()) == 401) {
+				System.err.println("OpenVidu credentials are wrong.");
+				throw new HttpClientErrorException(HttpStatus.UNAUTHORIZED);
+//				return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+			} else {
+				e.printStackTrace();
+				System.err.println(e.getMessage());
+				throw new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR);
+//				return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.err.println(e.getMessage());
+			throw new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR);
+//			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+
+		OpenViduData newOpenViduData = OpenViduData.builder()
+				.creator(openViduData.getCreator())
+				.recordingEnabled(openViduData.isRecordingEnabled())
+				.isRecordingActive(openViduData.isRecordingActive())
+				.broadcastingEnabled(openViduData.isBroadcastingEnabled())
+				.isBroadcastingActive(openViduData.isBroadcastingActive())
+				.session(SessionOutVo.of(openViduSession, getConnectionInfoList(openViduSession.getConnections())))
+				.build();
+		redisUtils.setObject(DataType.redisDataKey(sessionId, DataType.OPENVIDU), newOpenViduData);
+		redisUtils.incrementUserCount(DataType.redisDataKey(sessionId, DataType.USER_COUNT), 1);
+		return newOpenViduData;
+	}
+
+	private void initSessionCreator(String sessionId, String cameraConnectionToken, String uuid, long date){
+		String moderatorToken = cameraConnectionToken + "&" + MODERATOR_TOKEN_NAME + "="
+				+ uuid + "&createdAt=" + date;
+
+		Cookie cookie = new Cookie(MODERATOR_TOKEN_NAME, moderatorToken);
+		cookie.setMaxAge(cookieAdminMaxAge);
+//					res.addCookie(cookie);
+		// Remove participant cookie if exists
+		Cookie oldCookie = new Cookie(PARTICIPANT_TOKEN_NAME, "");
+		oldCookie.setMaxAge(0);
+//					res.addCookie(oldCookie);
+
+		RecordingData recData = new RecordingData(moderatorToken, "");
+		OpenViduService.moderatorsCookieMap.put(sessionId, recData);
+	}
+
+	private void initSessionParticipant(String sessionId, String cameraConnectionToken, String uuid, long date){
+		String participantToken = cameraConnectionToken + "&" + PARTICIPANT_TOKEN_NAME + "="
+				+ uuid + "&createdAt=" + date;
+
+		Cookie cookie = new Cookie(PARTICIPANT_TOKEN_NAME, participantToken);
+		cookie.setMaxAge(cookieAdminMaxAge);
+//					res.addCookie(cookie);
+		// Remove moderator cookie if exists
+		Cookie oldCookie = new Cookie(MODERATOR_TOKEN_NAME, "");
+		oldCookie.setMaxAge(0);
+//					res.addCookie(oldCookie);
+
+		List<String> tokens = OpenViduService.participantsCookieMap.containsKey(sessionId)
+				? OpenViduService.participantsCookieMap.get(sessionId)
+				: new ArrayList<String>();
+		tokens.add(participantToken);
+		OpenViduService.participantsCookieMap.put(sessionId, tokens);
 	}
 
 	public long getDateFromCookie(String recordingToken) {
@@ -160,8 +370,12 @@ public class OpenViduService {
 	public List<SessionOutVo> getActiveSessionList() throws OpenViduJavaClientException, OpenViduHttpException {
 		// 최신 active session 가져오기
 		openvidu.fetch();
+		List<Session> activeSessions = openvidu.getActiveSessions();
 		List<SessionOutVo> sessionOutVoList = new ArrayList<>();
-		for (Session session : openvidu.getActiveSessions()) {
+		if (CollectionUtils.isEmpty(activeSessions)) {
+			return sessionOutVoList;
+		}
+		for (Session session : activeSessions) {
 			sessionOutVoList.add(SessionOutVo.of(session, getConnectionInfoList(session.getConnections())));
 		}
 		return sessionOutVoList;
@@ -218,9 +432,15 @@ public class OpenViduService {
 		throw new RetryException("Max retries exceeded");
 	}
 
-	public Connection createConnection(Session session, String nickname, OpenViduRole role)
+	public ConnectionOutVo getConnection(String sessionId, Long userIdx, String tokenType){
+		return redisUtils.getObject(sessionId+"_"+tokenType+"_"+userIdx, ConnectionOutVo.class);
+	}
+
+	public ConnectionOutVo createConnection(Session session, Long userIdx, OpenViduRole role, String tokenType)
 			throws OpenViduJavaClientException, OpenViduHttpException, RetryException, InterruptedException {
-		return createConnection(session, nickname, role, new RetryOptions());
+		ConnectionOutVo connectionOutVo = ConnectionOutVo.of(createConnection(session, tokenType + "_" + userIdx, role, new RetryOptions()));
+		redisUtils.setObject(session.getSessionId()+"_"+tokenType+"_"+userIdx, connectionOutVo);
+		return connectionOutVo;
 	}
 
 	private Connection createConnection(Session session, String nickname, OpenViduRole role, RetryOptions retryOptions)
@@ -301,15 +521,6 @@ public class OpenViduService {
 			}
 		}
 		return recordingsAux;
-	}
-
-	public void startBroadcast(String sessionId, String broadcastUrl)
-			throws OpenViduJavaClientException, OpenViduHttpException {
-		this.openvidu.startBroadcast(sessionId, broadcastUrl);
-	}
-
-	public void stopBroadcast(String sessionId) throws OpenViduJavaClientException, OpenViduHttpException {
-		this.openvidu.stopBroadcast(sessionId);
 	}
 
 }
