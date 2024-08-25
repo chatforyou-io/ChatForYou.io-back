@@ -90,7 +90,6 @@ public class MailServiceImpl implements MailService {
         messageHelper.setSubject("ChatForYou.io 회원가입 이메일 인증");// 제목
         messageHelper.setText(text, true); // 내용, charset 타입, subtype
 
-//        messageHelper.setText(msg, "utf-8", "html");// 내용, charset 타입, subtype
         // 보내는 사람의 이메일 주소, 보내는 사람 이름
         messageHelper.setFrom("chatforyou@mail.hjproject.kro.kr", "chatforyou_admin"); // 보내는 사람
 

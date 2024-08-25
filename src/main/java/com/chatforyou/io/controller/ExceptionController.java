@@ -5,8 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,5 +42,14 @@ public class ExceptionController {
         response.put("message", ex.getMessage());
         log.error("========= exception ======== {}", ex.fillInStackTrace());
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(HttpClientErrorException.Unauthorized.class)
+    public ResponseEntity<Map<String, String>> handleAuthException(HttpClientErrorException.Unauthorized ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "Unauthorized");
+        response.put("message", ex.getMessage());
+        log.info("========= exception ======== {}", ex.fillInStackTrace());
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 }

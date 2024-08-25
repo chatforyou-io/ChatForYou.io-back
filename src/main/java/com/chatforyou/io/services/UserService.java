@@ -5,7 +5,7 @@ import com.chatforyou.io.models.out.UserOutVo;
 import org.apache.coyote.BadRequestException;
 
 public interface UserService {
-    UserOutVo getUserByIdx(Long idx);
+    UserOutVo findUserByIdx(Long idx);
     UserOutVo findUserById(String id);
     UserOutVo saveUser(UserInVo user) throws BadRequestException;
     UserOutVo updateUser(UserInVo user) throws BadRequestException;

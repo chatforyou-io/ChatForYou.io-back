@@ -15,6 +15,7 @@ import java.util.Set;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ToString
 public class UserOutVo {
+    private Long idx;
 
     private String id;
 
@@ -35,6 +36,7 @@ public class UserOutVo {
 
     public static UserOutVo of(User user) {
         return UserOutVo.builder()
+                .idx(user.getIdx())
                 .id(user.getId())
                 .pwd(user.getPwd())
                 .name(user.getName())

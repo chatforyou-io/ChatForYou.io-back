@@ -25,7 +25,7 @@ public class UserServiceImpl implements UserService {
     private final int MAX_FRIEND_USERS = 50;
 
     @Override
-    public UserOutVo getUserByIdx(Long idx) {
+    public UserOutVo findUserByIdx(Long idx) {
         User user = userRepository.findUserByIdx(idx).orElseThrow(() -> new EntityNotFoundException("can not find user"));
         return UserOutVo.of(user);
     }

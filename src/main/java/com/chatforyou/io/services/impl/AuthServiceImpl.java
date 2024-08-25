@@ -4,6 +4,7 @@ import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.AdminSessionData;
 import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.models.out.UserOutVo;
+import com.chatforyou.io.repository.ChatRoomRepository;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.utils.AuthUtils;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class AuthServiceImpl implements AuthService {
 
 	private final UserRepository userRepository;
+	private final ChatRoomRepository chatRoomRepository;
 
 	private Map<String, AdminSessionData> adminSessions = new HashMap<>();
 
@@ -68,8 +70,10 @@ public class AuthServiceImpl implements AuthService {
 			case NICKNAME:
 				return userRepository.checkExistsByNickName(str);
 			case PASSWORD:
-				// passwd validate 체크 필요
+				// TODO passwd validate 체크 필요
 				break;
+			case CHATROOM_NAME:
+				return chatRoomRepository.checkExistsByRoomName(str);
 		}
 
 		return false;
