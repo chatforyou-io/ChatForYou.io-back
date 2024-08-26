@@ -3,7 +3,6 @@ package com.chatforyou.io.controller;
 import com.chatforyou.io.models.in.ChatRoomInVo;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.services.ChatRoomService;
-import com.chatforyou.io.services.OpenViduService;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
@@ -21,6 +20,13 @@ public class ChatRoomController {
 
     private final ChatRoomService chatRoomService;
 
+    /**
+     * 새로운 채팅방을 생성
+     *
+     * @param chatRoomInVo 채팅방 생성에 필요한 정보를 담고 있는 객체
+     * @return 생성된 채팅방 정보를 포함한 ResponseEntity
+     * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     */
     @PostMapping("/create")
     public ResponseEntity<Map<String, Object>> createChatRoom(
             @RequestBody(required = true) ChatRoomInVo chatRoomInVo) throws BadRequestException {
@@ -31,9 +37,14 @@ public class ChatRoomController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // 채팅방 조회
-    // 유저 인덱스 추가
-    @GetMapping("/{sessionId}/info")
+    /**
+     * 특정 세션 ID를 기반으로 채팅방 정보를 조회
+     *
+     * @param sessionId 조회할 채팅방의 세션 ID
+     * @return 채팅방 정보를 포함한 ResponseEntity
+     * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     */
+    @GetMapping("/info/{sessionId}")
     public ResponseEntity<Map<String, Object>> getChatRoomInfo(
             @PathVariable("sessionId") String sessionId) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
@@ -43,14 +54,44 @@ public class ChatRoomController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    /**
+     * 특정 세션 ID를 기반으로 채팅방 정보를 수정
+     *
+     * @param sessionId 조회할 채팅방의 세션 ID
+     * @return 채팅방 정보를 포함한 ResponseEntity
+     * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     */
+    @GetMapping("/update/{sessionId}")
+    public ResponseEntity<Map<String, Object>> updateChatRoom(
+            @PathVariable("sessionId") String sessionId,
+            @RequestBody ChatRoomInVo chatRoomInVo) throws BadRequestException {
+        Map<String, Object> response = new HashMap<>();
+
+        ChatRoomOutVo chatRoom = chatRoomService.updateChatRoom(sessionId, chatRoomInVo);
+        response.put("result", chatRoom);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    /**
+     * 모든 채팅방 목록을 조회
+     *
+     * @return 채팅방 목록을 포함한 ResponseEntity
+     * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     */
     @GetMapping("/list")
-    // 유저 인덱스 추가
     public ResponseEntity<Map<String, Object>> getChatRoomList() throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
         response.put("result", chatRoomService.getChatRoomList());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    /**
+     * OpenVidu 세션 데이터를 조회
+     *
+     * @param sessionId 조회할 세션 ID
+     * @return OpenVidu 세션 데이터를 포함한 ResponseEntity
+     * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     */
     @GetMapping("/openvidu_data")
     public ResponseEntity<Map<String, Object>> getOpenViduData(
             @RequestParam String sessionId) throws BadRequestException {
@@ -59,7 +100,15 @@ public class ChatRoomController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @GetMapping("/{sessionId}/connection_token")
+    /**
+     * 특정 세션 ID와 사용자 인덱스를 기반으로 연결 정보를 조회
+     *
+     * @param sessionId 조회할 세션 ID
+     * @param userIdx 조회할 사용자 인덱스
+     * @return 연결 정보를 포함한 ResponseEntity
+     * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     */
+    @GetMapping("/connection_token/{sessionId}")
     public ResponseEntity<Map<String, Object>> getConnectionInfo(
             @PathVariable("sessionId") String sessionId,
             @RequestParam("user_idx") String userIdx) throws BadRequestException {
@@ -68,18 +117,32 @@ public class ChatRoomController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // 방 유저 입장
-    @PostMapping("/{sessionId}/join")
+    /**
+     * 사용자를 특정 채팅방에 입장시킵니다.
+     *
+     * @param sessionId 입장할 채팅방의 세션 ID
+     * @param userIdx 입장할 사용자 인덱스
+     * @return 입장 결과를 포함한 ResponseEntity
+     * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     */
+    @PostMapping("/join/{sessionId}")
     public ResponseEntity<Map<String, Object>> joinChatRoom(
             @PathVariable("sessionId") String sessionId,
-            @RequestParam("user_idx")String userIdx) throws BadRequestException {
+            @RequestParam("user_idx") String userIdx) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
         response.put("result", chatRoomService.joinChatRoom(sessionId, Long.parseLong(userIdx)));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // 방 비밀번호 확인
-    @PostMapping("/{sessionId}/check_password")
+    /**
+     * 채팅방 비밀번호를 확인
+     *
+     * @param sessionId 확인할 채팅방의 세션 ID
+     * @param chatRoomInVo 비밀번호 정보를 담고 있는 객체
+     * @return 비밀번호 확인 결과를 포함한 ResponseEntity
+     * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     */
+    @PostMapping("/check_password/{sessionId}")
     public ResponseEntity<Map<String, Object>> checkRoomPassword(
             @PathVariable("sessionId") String sessionId,
             @RequestBody ChatRoomInVo chatRoomInVo) throws BadRequestException {
@@ -90,6 +153,14 @@ public class ChatRoomController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/delete/{sessionId}")
+    public ResponseEntity<Map<String, Object>> deleteChatRoom(
+            @PathVariable("sessionId") String sessionId){
+        Map<String, Object> response = new HashMap<>();
+        response.put("result", chatRoomService.deleteChatRoom(sessionId));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
