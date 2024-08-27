@@ -4,15 +4,22 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.*;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.util.Set;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+
 @Component
+@Slf4j
 public class RedisUtils {
 
     private final RedisTemplate<String, Object> masterTemplate;
@@ -132,7 +139,22 @@ public class RedisUtils {
      * @return pattern 에 맞는 key set
      */
     public Set<String> getKeysByPattern(String pattern) {
-        return slaveTemplate.keys(pattern);
+        Set<String> keys = new HashSet<>();
+
+        // SCAN 옵션 설정 :: 와일드카드 검색할때는 뒤에 * 도 함께 붙여주자
+        ScanOptions scanOptions = ScanOptions.scanOptions().match(pattern+"*").count(100).build();
+
+        // Redis 커넥션에서 커서를 사용해 SCAN 명령 실행
+        try (Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(scanOptions)) {
+            while (cursor.hasNext()) {
+                // 커서가 반환하는 키를 Set에 추가
+                keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error occurred while scanning Redis keys", e);
+        }
+
+        return keys;
     }
 
     /**
@@ -143,7 +165,29 @@ public class RedisUtils {
     public int incrementUserCount(String sessionId, int count) {
         String key = sessionId + "_user_count";
 
-        // Redis INCR 명령을 사용하여 값을 증가시킵니다.
         return masterTemplate.opsForValue().increment(key, count).intValue();
     }
+
+    public void deleteKeysBySessionId(String sessionId) {
+        String pattern = "*" + sessionId + "*";
+
+        // SCAN 명령어를 사용하여 키 검색 및 삭제
+        ScanOptions scanOptions = ScanOptions.scanOptions().match(pattern).count(10).build();
+
+        List<String> keysToDelete = new ArrayList<>();
+        try (Cursor<byte[]> cursor = masterTemplate.execute(
+                (RedisCallback<Cursor<byte[]>>) connection -> connection.scan(scanOptions))) {
+
+            while (cursor.hasNext()) {
+                keysToDelete.add(new String(cursor.next(), StandardCharsets.UTF_8).replace("\"", ""));
+            }
+        } catch (Exception e) {
+            log.error("Error occurred while scanning and deleting keys ::: {}", e.getMessage());
+        }
+
+        if (!keysToDelete.isEmpty()) {
+            masterTemplate.delete(keysToDelete);
+        }
+    }
+
 }

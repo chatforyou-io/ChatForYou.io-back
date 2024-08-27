@@ -33,7 +33,8 @@ public class ChatRoomController {
         Map<String, Object> response = new HashMap<>();
 
         ChatRoomOutVo chatRoom = chatRoomService.createChatRoom(chatRoomInVo);
-        response.put("result", chatRoom);
+        response.put("result", "success");
+        response.put("roomData", chatRoom);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -50,7 +51,8 @@ public class ChatRoomController {
         Map<String, Object> response = new HashMap<>();
 
         ChatRoomOutVo chatRoom = chatRoomService.getChatRoomBySessionId(sessionId);
-        response.put("result", chatRoom);
+        response.put("result", "success");
+        response.put("roomData", chatRoom);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -61,14 +63,30 @@ public class ChatRoomController {
      * @return 채팅방 정보를 포함한 ResponseEntity
      * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
      */
-    @GetMapping("/update/{sessionId}")
+    @PatchMapping("/update/{sessionId}")
     public ResponseEntity<Map<String, Object>> updateChatRoom(
             @PathVariable("sessionId") String sessionId,
             @RequestBody ChatRoomInVo chatRoomInVo) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
 
         ChatRoomOutVo chatRoom = chatRoomService.updateChatRoom(sessionId, chatRoomInVo);
-        response.put("result", chatRoom);
+        response.put("result", "success");
+        response.put("roomData", chatRoom);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    /**
+     * 특정 세션 ID를 기반으로 채팅 방 삭제
+     *
+     * @param sessionId 삭제할 채팅방의 세션 ID
+     * @return 삭제 성공 실패 여부
+     * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     */
+    @DeleteMapping("/delete/{sessionId}")
+    public ResponseEntity<Map<String, Object>> deleteChatRoom(
+            @PathVariable("sessionId") String sessionId){
+        Map<String, Object> response = new HashMap<>();
+        response.put("result", chatRoomService.deleteChatRoom(sessionId) ? "success" : "Fail Delete ChatRoom");
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -81,7 +99,8 @@ public class ChatRoomController {
     @GetMapping("/list")
     public ResponseEntity<Map<String, Object>> getChatRoomList() throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
-        response.put("result", chatRoomService.getChatRoomList());
+        response.put("result", "success");
+        response.put("roomList", chatRoomService.getChatRoomList());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -96,7 +115,8 @@ public class ChatRoomController {
     public ResponseEntity<Map<String, Object>> getOpenViduData(
             @RequestParam String sessionId) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
-        response.put("result", chatRoomService.getOpenviduDataBySessionId(sessionId));
+        response.put("result", "success");
+        response.put("openViduData", chatRoomService.getOpenviduDataBySessionId(sessionId));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -113,7 +133,8 @@ public class ChatRoomController {
             @PathVariable("sessionId") String sessionId,
             @RequestParam("user_idx") String userIdx) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
-        response.put("result", chatRoomService.getConnectionInfo(sessionId, Long.parseLong(userIdx)));
+        response.put("result", "success");
+        response.put("connectionTokenData", chatRoomService.getConnectionInfo(sessionId, Long.parseLong(userIdx)));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -130,7 +151,8 @@ public class ChatRoomController {
             @PathVariable("sessionId") String sessionId,
             @RequestParam("user_idx") String userIdx) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
-        response.put("result", chatRoomService.joinChatRoom(sessionId, Long.parseLong(userIdx)));
+        response.put("result", "success");
+        response.put("joinData", chatRoomService.joinChatRoom(sessionId, Long.parseLong(userIdx)));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -153,14 +175,6 @@ public class ChatRoomController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
-
-    @DeleteMapping("/delete/{sessionId}")
-    public ResponseEntity<Map<String, Object>> deleteChatRoom(
-            @PathVariable("sessionId") String sessionId){
-        Map<String, Object> response = new HashMap<>();
-        response.put("result", chatRoomService.deleteChatRoom(sessionId));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

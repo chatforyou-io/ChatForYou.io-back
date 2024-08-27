@@ -1,5 +1,6 @@
 package com.chatforyou.io.entity;
 
+import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.models.in.ChatRoomInVo;
 import jakarta.persistence.*;
 import lombok.*;
@@ -69,6 +70,22 @@ public class ChatRoom {
                 .desc(chatRoomInVo.getDesc())
                 .maxUserCount(chatRoomInVo.getMaxUserCount())
                 .createDate(new Date().getTime())
+                .build();
+    }
+
+    public static ChatRoom ofUpdate(ChatRoom chatRoom, ChatRoomInVo chatRoomInVo){
+        return ChatRoom.builder()
+                .idx(chatRoom.getIdx())
+                .user(chatRoom.getUser())
+                .sessionId(chatRoom.getSessionId())
+                .name(StringUtil.isNullOrEmpty(chatRoomInVo.getRoomName()) ? chatRoom.getName() : chatRoomInVo.getRoomName())
+                .pwd(chatRoomInVo.getPwd())
+                .usePwd(Objects.nonNull(chatRoomInVo.getUsePwd()) ? chatRoomInVo.getUsePwd() : chatRoom.getUsePwd())
+                .usePrivate(Objects.nonNull(chatRoomInVo.getUsePrivate()) ? chatRoomInVo.getUsePrivate() : chatRoom.getUsePrivate())
+                .useRtc(chatRoom.getUseRtc())
+                .desc(StringUtil.isNullOrEmpty(chatRoomInVo.getDesc()) ? chatRoom.getDesc() : chatRoomInVo.getDesc())
+                .maxUserCount(chatRoomInVo.getMaxUserCount() == 0 ? chatRoom.getMaxUserCount() : chatRoomInVo.getMaxUserCount())
+                .createDate(chatRoom.getCreateDate())
                 .build();
     }
 

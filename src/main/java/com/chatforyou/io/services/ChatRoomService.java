@@ -15,7 +15,9 @@ public interface ChatRoomService {
     List<ChatRoomOutVo> getChatRoomList();
     ChatRoomOutVo findChatRoomByRoomName(String roomName);
     Map<String, String> joinChatRoom(String roomName, Long userIdx) throws BadRequestException;
-    Map<String, ConnectionOutVo> getConnectionInfo(String sessionId, Long userId);
+    Map<String, Object> getConnectionInfo(String sessionId, Long userId);
     ChatRoomOutVo getChatRoomBySessionId(String sessionId);
     Boolean checkRoomPassword(String sessionId, String pwd) throws BadRequestException;
+    ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo chatRoomInVo) throws BadRequestException;
+    boolean deleteChatRoom(String sessionId);
 }
