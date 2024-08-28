@@ -1,5 +1,7 @@
 package com.chatforyou.io.services;
 
+import com.chatforyou.io.client.OpenViduHttpException;
+import com.chatforyou.io.client.OpenViduJavaClientException;
 import com.chatforyou.io.models.OpenViduData;
 import com.chatforyou.io.models.in.ChatRoomInVo;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
@@ -19,5 +21,5 @@ public interface ChatRoomService {
     ChatRoomOutVo getChatRoomBySessionId(String sessionId);
     Boolean checkRoomPassword(String sessionId, String pwd) throws BadRequestException;
     ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo chatRoomInVo) throws BadRequestException;
-    boolean deleteChatRoom(String sessionId);
+    boolean deleteChatRoom(String sessionId) throws OpenViduJavaClientException, OpenViduHttpException;
 }

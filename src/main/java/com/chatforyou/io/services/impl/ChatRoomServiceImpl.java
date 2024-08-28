@@ -1,6 +1,9 @@
 package com.chatforyou.io.services.impl;
 
 import ch.qos.logback.core.util.StringUtil;
+import com.chatforyou.io.client.OpenViduHttpException;
+import com.chatforyou.io.client.OpenViduJavaClientException;
+import com.chatforyou.io.client.Session;
 import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.DataType;
@@ -174,7 +177,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
 
         ThreadUtils.runTask(()-> redisUtils.deleteKeysBySessionId(sessionId), 10, 100, "delete All sessionInfo");
-
+        // TODO 왜 session.fetch() 가 여러번 불리는지 확인해야함
+        ThreadUtils.runTask(()-> openViduService.closeSession(sessionId), 10, 100, "delete openvidu data");
         return result;
     }
 

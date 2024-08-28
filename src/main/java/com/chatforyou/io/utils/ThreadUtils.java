@@ -1,6 +1,9 @@
 package com.chatforyou.io.utils;
 
+import com.chatforyou.io.client.OpenViduHttpException;
+import com.chatforyou.io.client.OpenViduJavaClientException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
 
 /**
  * FunctionalInterface 를 이용한 Thread Job 구현
@@ -13,7 +16,7 @@ public class ThreadUtils {
 
     @FunctionalInterface
     public interface Task {
-        void execute();
+        void execute() throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException, RuntimeException;
     }
 
     /**

@@ -1,5 +1,7 @@
 package com.chatforyou.io.controller;
 
+import com.chatforyou.io.client.OpenViduHttpException;
+import com.chatforyou.io.client.OpenViduJavaClientException;
 import com.chatforyou.io.models.in.ChatRoomInVo;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.services.ChatRoomService;
@@ -84,7 +86,7 @@ public class ChatRoomController {
      */
     @DeleteMapping("/delete/{sessionId}")
     public ResponseEntity<Map<String, Object>> deleteChatRoom(
-            @PathVariable("sessionId") String sessionId){
+            @PathVariable("sessionId") String sessionId) throws OpenViduJavaClientException, OpenViduHttpException {
         Map<String, Object> response = new HashMap<>();
         response.put("result", chatRoomService.deleteChatRoom(sessionId) ? "success" : "Fail Delete ChatRoom");
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -97,7 +99,7 @@ public class ChatRoomController {
      * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
      */
     @GetMapping("/list")
-    public ResponseEntity<Map<String, Object>> getChatRoomList() throws BadRequestException {
+    public ResponseEntity<Map<String, Object>> getChatRoomList() {
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         response.put("roomList", chatRoomService.getChatRoomList());

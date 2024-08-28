@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.server.ServerErrorException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
@@ -367,7 +368,7 @@ public class OpenViduService {
 		return createSession(sessionId, retryOptions);
 	}
 
-	public List<SessionOutVo> getActiveSessionList() throws OpenViduJavaClientException, OpenViduHttpException {
+	public List<SessionOutVo> getActiveSessionOutVoList() throws OpenViduJavaClientException, OpenViduHttpException {
 		// 최신 active session 가져오기
 		openvidu.fetch();
 		List<Session> activeSessions = openvidu.getActiveSessions();
@@ -379,6 +380,29 @@ public class OpenViduService {
 			sessionOutVoList.add(SessionOutVo.of(session, getConnectionInfoList(session.getConnections())));
 		}
 		return sessionOutVoList;
+	}
+
+	public Session getSession(String sessionId) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
+		// 최신 active session 가져오기
+		openvidu.fetch();
+		List<Session> activeSessions = openvidu.getActiveSessions();
+
+		if (CollectionUtils.isEmpty(activeSessions)) {
+			return null;
+		}
+		Session session = activeSessions.stream()
+				.filter(s -> sessionId.equals(s.getSessionId()))
+				.findFirst()
+				.orElseThrow(() -> new BadRequestException("Can not find Session"));
+
+		return session;
+	}
+
+	public void closeSession(String sessionId) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
+		Session session = this.getSession(sessionId);
+		if (Objects.nonNull(session)) {
+			session.close();
+		}
 	}
 
 	private Map<String, ConnectionOutVo> getConnectionInfoList(List<Connection> connectionList){
