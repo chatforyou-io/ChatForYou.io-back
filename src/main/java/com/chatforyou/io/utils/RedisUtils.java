@@ -1,8 +1,10 @@
 package com.chatforyou.io.utils;
 
+import com.chatforyou.io.models.DataType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.lettuce.core.RedisException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -159,34 +161,60 @@ public class RedisUtils {
 
     /**
      * redis 에 저장된 데이터를 가져와서 값을 count 만큼 증가시킨다
-     * @param sessionId
+     * @param key
      * @return
      */
-    public int incrementUserCount(String sessionId, int count) {
-        String key = sessionId + "_user_count";
-
+    public int incrementUserCount(String key, int count) {
         return masterTemplate.opsForValue().increment(key, count).intValue();
     }
 
-    public void deleteKeysBySessionId(String sessionId) {
-        String pattern = "*" + sessionId + "*";
+    /**
+     * user_count 값이 0인 키들을 검색한다
+     * @return List<String> - 값이 0인 키들의 목록
+     */
+    public List<String> getSessionListForDelete() {
+        String pattern = "*_"+ DataType.USER_COUNT+"*";
+        List<String> sessionList = new ArrayList<>();
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
 
-        // SCAN 명령어를 사용하여 키 검색 및 삭제
-        ScanOptions scanOptions = ScanOptions.scanOptions().match(pattern).count(10).build();
+        Cursor<byte[]> cursor = masterTemplate.getConnectionFactory().getConnection().scan(options);
 
-        List<String> keysToDelete = new ArrayList<>();
-        try (Cursor<byte[]> cursor = masterTemplate.execute(
-                (RedisCallback<Cursor<byte[]>>) connection -> connection.scan(scanOptions))) {
-
-            while (cursor.hasNext()) {
-                keysToDelete.add(new String(cursor.next(), StandardCharsets.UTF_8).replace("\"", ""));
+        while (cursor.hasNext()) {
+            String key = new String(cursor.next()).replace("\"", "");
+            int userCount = (int)masterTemplate.opsForValue().get(key);
+            if (0 == userCount) {
+                sessionList.add(key.split("_")[0]);
             }
-        } catch (Exception e) {
-            log.error("Error occurred while scanning and deleting keys ::: {}", e.getMessage());
         }
 
-        if (!keysToDelete.isEmpty()) {
-            masterTemplate.delete(keysToDelete);
+        return sessionList;
+    }
+
+    public boolean deleteKeysBySessionId(String sessionId) {
+        String pattern = "*" + sessionId + "*";
+        try {
+            // SCAN 명령어를 사용하여 키 검색 및 삭제
+            ScanOptions scanOptions = ScanOptions.scanOptions().match(pattern).count(10).build();
+
+            List<String> keysToDelete = new ArrayList<>();
+            try (Cursor<byte[]> cursor = masterTemplate.execute(
+                    (RedisCallback<Cursor<byte[]>>) connection -> connection.scan(scanOptions))) {
+
+                while (cursor.hasNext()) {
+                    keysToDelete.add(new String(cursor.next(), StandardCharsets.UTF_8).replace("\"", ""));
+                }
+            } catch (Exception e) {
+                log.error("Error occurred while scanning and deleting keys ::: {}", e.getMessage());
+                return false;
+            }
+
+            if (!keysToDelete.isEmpty()) {
+                masterTemplate.delete(keysToDelete);
+            }
+            return true;
+        }catch (RedisException e){
+            log.error("UnExcepted Redis Exception ::: {}", Arrays.toString(e.getStackTrace()));
+            return false;
         }
     }
 

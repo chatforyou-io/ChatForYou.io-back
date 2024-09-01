@@ -1,6 +1,6 @@
 package com.chatforyou.io.config;
 
-import com.chatforyou.io.models.OpenViduData;
+import com.chatforyou.io.models.OpenViduDto;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.utils.RedisUtils;
 import org.junit.jupiter.api.DisplayName;
@@ -79,10 +79,10 @@ public class RedisConfigTest {
     @DisplayName("redis chatroom 확인")
     @Test
     void redisChatRoomTest(){
-        OpenViduData openViduData = redisUtils.getObject("a9ff5c3a-76f7-45a6-90f9-387b4d06d5a2", OpenViduData.class);
-        logger.info("chatroom :::: {}", openViduData.toString());
-        logger.info("session ::: {}", openViduData.getSession().toString());
-        logger.info("connection ::: {}", openViduData.getSession().getConnections().toString());
+        OpenViduDto openViduDto = redisUtils.getObject("a9ff5c3a-76f7-45a6-90f9-387b4d06d5a2", OpenViduDto.class);
+        logger.info("chatroom :::: {}", openViduDto.toString());
+        logger.info("session ::: {}", openViduDto.getSession().toString());
+        logger.info("connection ::: {}", openViduDto.getSession().getConnections().toString());
         long expired = redisUtils.getExpiredByTimeUnit(chatRoomOutVo.getSessionId(), TimeUnit.SECONDS);
         logger.info("expired ::::: {}", expired);
 

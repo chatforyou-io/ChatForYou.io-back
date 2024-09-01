@@ -16,7 +16,7 @@ public class ThreadUtils {
 
     @FunctionalInterface
     public interface Task {
-        void execute() throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException, RuntimeException;
+        boolean execute() throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException, RuntimeException;
     }
 
     /**
@@ -33,9 +33,22 @@ public class ThreadUtils {
             boolean isSuccess = false;
             while (attempts < retry && !isSuccess) {
                 try {
-                    task.execute();
-                    isSuccess = true;
-                    log.info("=== {} Job Success ===", jobName);
+                    isSuccess = task.execute();
+
+                    if(!isSuccess){
+                        attempts++;
+                        if (attempts < retry) {
+                            log.info("=== try {} Job :: {}", jobName, attempts);
+                            try {
+                                Thread.sleep(sleep);
+                            } catch (InterruptedException ie) {
+                                // 스레드 대기 중 인터럽트 예외 처리
+                                Thread.currentThread().interrupt();
+                            }
+                        }
+                    } else {
+                        log.info("=== {} Job Success ===", jobName);
+                    }
                 } catch (Exception e) {
                     attempts++;
                     if (attempts < retry) {
