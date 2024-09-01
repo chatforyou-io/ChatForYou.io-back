@@ -59,7 +59,7 @@ public class AuthServiceImpl implements AuthService {
 			throw new EntityNotFoundException("Invalid User Id or Password");
 		}
 
-		return UserOutVo.of(user);
+		return UserOutVo.of(user, true);
 	}
 
 	@Override

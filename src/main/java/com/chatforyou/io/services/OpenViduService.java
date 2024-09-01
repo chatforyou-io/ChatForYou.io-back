@@ -6,24 +6,27 @@ import com.chatforyou.io.client.*;
 import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.DataType;
-import com.chatforyou.io.models.OpenViduData;
+import com.chatforyou.io.models.OpenViduDto;
 import com.chatforyou.io.models.RecordingData;
 import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.SessionOutVo;
 import com.chatforyou.io.utils.RedisUtils;
 import com.chatforyou.io.utils.RetryException;
 import com.chatforyou.io.utils.RetryOptions;
+import com.chatforyou.io.utils.ThreadUtils;
+import io.lettuce.core.RedisException;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.server.ServerErrorException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
@@ -31,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OpenViduService {
 
 	public static final String MODERATOR_TOKEN_NAME = "ovCallModeratorToken";
@@ -68,8 +72,8 @@ public class OpenViduService {
 		return "Basic " + new String(encodedString);
 	}
 
-	public OpenViduData createOpenViduRoom(ChatRoom chatRoom) throws BadRequestException {
-		OpenViduData openViduData = null;
+	public OpenViduDto createOpenViduRoom(ChatRoom chatRoom) throws BadRequestException {
+		OpenViduDto openViduDto = null;
 
 		try {
 			long date = -1;
@@ -90,7 +94,7 @@ public class OpenViduService {
 			ConnectionOutVo cameraConnection = this.createConnection(openViduSession, userIdx, OpenViduRole.MODERATOR, "camera");
 			ConnectionOutVo screenConnection = this.createConnection(openViduSession, userIdx, OpenViduRole.MODERATOR, "screen");
 
-			openViduData = OpenViduData.builder()
+			openViduDto = OpenViduDto.builder()
 					.creator(chatRoom.getUser().getNickName())
 					.recordingEnabled(IS_RECORDING_ENABLED)
 					.isRecordingActive(openViduSession.isBeingRecorded())
@@ -137,18 +141,18 @@ public class OpenViduService {
 			throw new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR);
 //			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
-		redisUtils.setObject(DataType.redisDataKey(chatRoom.getSessionId(), DataType.OPENVIDU), openViduData);
+		redisUtils.setObject(DataType.redisDataKey(chatRoom.getSessionId(), DataType.OPENVIDU), openViduDto);
 		redisUtils.setObject(DataType.redisDataKey(chatRoom.getSessionId(), DataType.USER_COUNT), 0);
-		return openViduData;
+		return openViduDto;
 	}
 
-	public OpenViduData joinOpenviduRoom(String sessionId, User joinUser) throws BadRequestException {
+	public OpenViduDto joinOpenviduRoom(String sessionId, User joinUser) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException {
 		Session openViduSession = this.openvidu.getActiveSession(sessionId);
-		OpenViduData openViduData = redisUtils.getObject(DataType.redisDataKey(sessionId, DataType.OPENVIDU), OpenViduData.class);
-		if (Objects.isNull(openViduSession) || Objects.isNull(openViduData)) {
+		OpenViduDto openViduDto = redisUtils.getObject(DataType.redisDataKey(sessionId, DataType.OPENVIDU), OpenViduDto.class);
+		if (Objects.isNull(openViduSession) || Objects.isNull(openViduDto)) {
 			throw new BadRequestException("Unknown Openvidu Session");
 		}
-		String creator = openViduData.getCreator();
+		String creator = openViduDto.getCreator();
 		try {
 			long date = -1;
 			// sessionId 는 일종의 roomId
@@ -215,17 +219,23 @@ public class OpenViduService {
 //			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 
-		OpenViduData newOpenViduData = OpenViduData.builder()
-				.creator(openViduData.getCreator())
-				.recordingEnabled(openViduData.isRecordingEnabled())
-				.isRecordingActive(openViduData.isRecordingActive())
-				.broadcastingEnabled(openViduData.isBroadcastingEnabled())
-				.isBroadcastingActive(openViduData.isBroadcastingActive())
+		OpenViduDto newOpenViduDto = OpenViduDto.builder()
+				.creator(openViduDto.getCreator())
+				.recordingEnabled(openViduDto.isRecordingEnabled())
+				.isRecordingActive(openViduDto.isRecordingActive())
+				.broadcastingEnabled(openViduDto.isBroadcastingEnabled())
+				.isBroadcastingActive(openViduDto.isBroadcastingActive())
 				.session(SessionOutVo.of(openViduSession, getConnectionInfoList(openViduSession.getConnections())))
 				.build();
-		redisUtils.setObject(DataType.redisDataKey(sessionId, DataType.OPENVIDU), newOpenViduData);
-		redisUtils.incrementUserCount(DataType.redisDataKey(sessionId, DataType.USER_COUNT), 1);
-		return newOpenViduData;
+
+
+		ThreadUtils.runTask(()->{
+			redisUtils.setObject(DataType.redisDataKey(sessionId, DataType.OPENVIDU), newOpenViduDto);
+			redisUtils.incrementUserCount(DataType.redisDataKey(sessionId, DataType.USER_COUNT), 1);
+			return true;
+		}, 10, 10, "Join User");
+
+		return newOpenViduDto;
 	}
 
 	private void initSessionCreator(String sessionId, String cameraConnectionToken, String uuid, long date){
@@ -382,26 +392,28 @@ public class OpenViduService {
 		return sessionOutVoList;
 	}
 
-	public Session getSession(String sessionId) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
+	public Optional<Session> getSession(String sessionId) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
 		// 최신 active session 가져오기
 		openvidu.fetch();
 		List<Session> activeSessions = openvidu.getActiveSessions();
 
-		if (CollectionUtils.isEmpty(activeSessions)) {
-			return null;
-		}
-		Session session = activeSessions.stream()
+		return activeSessions.stream()
 				.filter(s -> sessionId.equals(s.getSessionId()))
-				.findFirst()
-				.orElseThrow(() -> new BadRequestException("Can not find Session"));
-
-		return session;
+				.findFirst();
 	}
 
-	public void closeSession(String sessionId) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
-		Session session = this.getSession(sessionId);
-		if (Objects.nonNull(session)) {
-			session.close();
+	public boolean closeSession(String sessionId) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
+		try {
+			Optional<Session> session = this.getSession(sessionId);
+			if (session.isEmpty()) {
+				return true;
+			}
+
+			session.get().close();
+			return true;
+		} catch (Exception e) {
+			log.error("close session Exception ::: {}", e.getMessage());
+			return false;
 		}
 	}
 

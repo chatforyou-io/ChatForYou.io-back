@@ -679,7 +679,8 @@ public class OpenVidu {
 	 * @param sessionId
 	 * @return
 	 */
-	public Session getActiveSession(String sessionId) {
+	public Session getActiveSession(String sessionId) throws OpenViduJavaClientException, OpenViduHttpException {
+		this.fetch();
 		return this.activeSessions.get(sessionId);
 	}
 

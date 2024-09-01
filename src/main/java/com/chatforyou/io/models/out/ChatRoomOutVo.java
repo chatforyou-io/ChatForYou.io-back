@@ -6,6 +6,8 @@ import com.chatforyou.io.utils.RedisUtils;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
+import java.util.List;
+
 @Builder
 @Getter
 @NoArgsConstructor
@@ -24,6 +26,8 @@ public class ChatRoomOutVo {
     @Setter
     private int currentUserCount;
     private Integer maxUserCount;
+    @Setter
+    private List<UserOutVo> userList;
 
     public static ChatRoomOutVo of(ChatRoom chatRoom, int currentUserCount){
         return ChatRoomOutVo.builder()

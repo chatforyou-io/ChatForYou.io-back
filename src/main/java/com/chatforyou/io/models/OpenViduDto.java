@@ -15,7 +15,7 @@ import java.io.Serializable;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class OpenViduData implements Serializable {
+public class OpenViduDto implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 

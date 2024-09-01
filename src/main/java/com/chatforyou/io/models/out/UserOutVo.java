@@ -4,6 +4,7 @@ import com.chatforyou.io.entity.Board;
 import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.entity.Social;
 import com.chatforyou.io.entity.User;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ToString
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UserOutVo {
     private Long idx;
 
@@ -34,11 +36,11 @@ public class UserOutVo {
 
     private List<Social> socials;
 
-    public static UserOutVo of(User user) {
+    public static UserOutVo of(User user, boolean includePwd) {
         return UserOutVo.builder()
                 .idx(user.getIdx())
                 .id(user.getId())
-                .pwd(user.getPwd())
+                .pwd(includePwd ? user.getPwd() : null)
                 .name(user.getName())
                 .nickName(user.getNickName())
                 .build();

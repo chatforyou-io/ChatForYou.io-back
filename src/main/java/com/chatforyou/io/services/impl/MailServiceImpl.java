@@ -30,7 +30,15 @@ public class MailServiceImpl implements MailService {
         MimeMessage message = createMessage(email, bodyText);
 
         // send 라는 job 을 최대 5번, 1000ms 마다 반복
-        ThreadUtils.runTask(()-> mailSender.send(message), 5, 1000, "Mail");
+        ThreadUtils.runTask(() -> {
+            try {
+                mailSender.send(message);
+                return true;
+            } catch (Exception e) {
+                log.error("Exception occurred while sending mail", e);
+                return false;
+            }
+        }, 5, 1000, "Send Mail Job");
         mailValidateInfo.put(email, ePw);
 
         return ePw;
