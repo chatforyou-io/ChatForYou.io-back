@@ -47,12 +47,12 @@ public class RedisConfig {
             host = envRedisUrl;
         }
 
-        String envRedisMasterPort = System.getenv("REDIS_PORT");
+        String envRedisMasterPort = System.getenv("REDIS_MASTER_PORT");
         if(!StringUtil.isNullOrEmpty(envRedisMasterPort)){
             masterPort = envRedisMasterPort;
         }
 
-        String envRedisSlavePort = System.getenv("REDIS_PORT");
+        String envRedisSlavePort = System.getenv("REDIS_SLAVE_PORT");
         if(!StringUtil.isNullOrEmpty(envRedisSlavePort)){
             slavePort = envRedisSlavePort;
         }

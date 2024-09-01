@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpClientErrorException;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,7 +23,7 @@ public class ExceptionController {
         Map<String, String> response = new HashMap<>();
         response.put("error", "can not find info");
         response.put("message", ex.getMessage());
-        log.info("========= exception ======== {}", ex.fillInStackTrace());
+        log.info("========= exception ======== {}", ex.getMessage());
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
@@ -31,7 +32,7 @@ public class ExceptionController {
         Map<String, String> response = new HashMap<>();
         response.put("error", "Bad Request");
         response.put("message", ex.getMessage());
-        log.info("========= exception ======== {}", ex.fillInStackTrace());
+        log.info("========= exception ======== {}", ex.getMessage());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
@@ -40,7 +41,7 @@ public class ExceptionController {
         Map<String, String> response = new HashMap<>();
         response.put("error", "Internal Server Error");
         response.put("message", ex.getMessage());
-        log.error("========= exception ======== {}", ex.fillInStackTrace());
+        log.error("RuntimeException: {}", ex.getMessage(), ex);
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -49,7 +50,16 @@ public class ExceptionController {
         Map<String, String> response = new HashMap<>();
         response.put("error", "Unauthorized");
         response.put("message", ex.getMessage());
-        log.info("========= exception ======== {}", ex.fillInStackTrace());
+        log.error("UnauthorizedException: {}", ex.getMessage(), ex);
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "Unauthorized");
+        response.put("message", ex.getMessage());
+        log.error("UnauthorizedException: {}", ex.getMessage(), ex);
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
