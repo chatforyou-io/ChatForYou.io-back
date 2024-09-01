@@ -27,13 +27,13 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserOutVo findUserByIdx(Long idx) {
         User user = userRepository.findUserByIdx(idx).orElseThrow(() -> new EntityNotFoundException("can not find user"));
-        return UserOutVo.of(user);
+        return UserOutVo.of(user, false);
     }
 
     @Override
     public UserOutVo findUserById(String id) {
         User user = userRepository.findUserById(id).orElseThrow(() -> new EntityNotFoundException("can not find user"));
-        return UserOutVo.of(user);
+        return UserOutVo.of(user, false);
     }
 
     @Override
@@ -49,7 +49,7 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("Already Exist User ID");
         }
         User userEntity = User.ofSave(userInVO);
-        return UserOutVo.of(userRepository.saveAndFlush(userEntity));
+        return UserOutVo.of(userRepository.saveAndFlush(userEntity), false);
     }
 
     @Override
@@ -61,7 +61,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(()->new EntityNotFoundException("can not find user"));
 
         User updatedUser = User.ofUpdate(userInVO, user);
-        return UserOutVo.of(userRepository.saveAndFlush(updatedUser));
+        return UserOutVo.of(userRepository.saveAndFlush(updatedUser), false);
     }
 
     @Override
