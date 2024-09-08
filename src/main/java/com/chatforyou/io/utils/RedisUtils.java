@@ -1,6 +1,9 @@
 package com.chatforyou.io.utils;
 
 import com.chatforyou.io.models.DataType;
+import com.chatforyou.io.models.OpenViduDto;
+import com.chatforyou.io.models.out.ChatRoomOutVo;
+import com.chatforyou.io.models.out.UserOutVo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,13 +11,9 @@ import io.lettuce.core.RedisException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.*;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -169,6 +168,15 @@ public class RedisUtils {
     }
 
     /**
+     * redis 에 저장된 데이터를 가져와서 값을 count 만큼 감소시킨다
+     * @param key
+     * @return
+     */
+    public int decrementUserCount(String key, int count) {
+        return masterTemplate.opsForValue().decrement(key, count).intValue();
+    }
+
+    /**
      * user_count 값이 0인 키들을 검색한다
      * @return List<String> - 값이 0인 키들의 목록
      */
@@ -177,11 +185,11 @@ public class RedisUtils {
         List<String> sessionList = new ArrayList<>();
         ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
 
-        Cursor<byte[]> cursor = masterTemplate.getConnectionFactory().getConnection().scan(options);
+        Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options);
 
         while (cursor.hasNext()) {
             String key = new String(cursor.next()).replace("\"", "");
-            int userCount = (int)masterTemplate.opsForValue().get(key);
+            int userCount = (int)slaveTemplate.opsForValue().get(key);
             if (0 == userCount) {
                 sessionList.add(key.split("_")[0]);
             }
@@ -190,14 +198,14 @@ public class RedisUtils {
         return sessionList;
     }
 
-    public boolean deleteKeysBySessionId(String sessionId) {
-        String pattern = "*" + sessionId + "*";
+    public boolean deleteKeysByKey(String key) {
+        String pattern = "*" + key + "*";
         try {
             // SCAN 명령어를 사용하여 키 검색 및 삭제
             ScanOptions scanOptions = ScanOptions.scanOptions().match(pattern).count(10).build();
 
             List<String> keysToDelete = new ArrayList<>();
-            try (Cursor<byte[]> cursor = masterTemplate.execute(
+            try (Cursor<byte[]> cursor = slaveTemplate.execute(
                     (RedisCallback<Cursor<byte[]>>) connection -> connection.scan(scanOptions))) {
 
                 while (cursor.hasNext()) {
@@ -218,4 +226,23 @@ public class RedisUtils {
         }
     }
 
+    public void joinUserJob(String sessionId, ChatRoomOutVo chatRoom, List<UserOutVo> userList, OpenViduDto openViduDto){
+        masterTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.CHATROOM), chatRoom);
+            masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.USER_LIST), userList);
+            masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.OPENVIDU), openViduDto);
+            this.incrementUserCount(DataType.redisDataType(sessionId, DataType.USER_COUNT), 1);
+            return null; // 파이프라인에서 결과는 executePipelined 로 반환되므로 null 반환
+        });
+    }
+
+    public void leftUserJob(String sessionId, ChatRoomOutVo chatRoom, List<UserOutVo> userList){
+        masterTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.CHATROOM), chatRoom);
+            masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.USER_LIST), userList);
+
+
+            return null;
+        });
+    }
 }

@@ -14,14 +14,12 @@ import com.chatforyou.io.utils.RedisUtils;
 import com.chatforyou.io.utils.RetryException;
 import com.chatforyou.io.utils.RetryOptions;
 import com.chatforyou.io.utils.ThreadUtils;
-import io.lettuce.core.RedisException;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -141,14 +139,13 @@ public class OpenViduService {
 			throw new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR);
 //			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
-		redisUtils.setObject(DataType.redisDataKey(chatRoom.getSessionId(), DataType.OPENVIDU), openViduDto);
-		redisUtils.setObject(DataType.redisDataKey(chatRoom.getSessionId(), DataType.USER_COUNT), 0);
+		redisUtils.setObject(DataType.redisDataType(chatRoom.getSessionId(), DataType.OPENVIDU), openViduDto);
 		return openViduDto;
 	}
 
 	public OpenViduDto joinOpenviduRoom(String sessionId, User joinUser) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException {
 		Session openViduSession = this.openvidu.getActiveSession(sessionId);
-		OpenViduDto openViduDto = redisUtils.getObject(DataType.redisDataKey(sessionId, DataType.OPENVIDU), OpenViduDto.class);
+		OpenViduDto openViduDto = redisUtils.getObject(DataType.redisDataType(sessionId, DataType.OPENVIDU), OpenViduDto.class);
 		if (Objects.isNull(openViduSession) || Objects.isNull(openViduDto)) {
 			throw new BadRequestException("Unknown Openvidu Session");
 		}
@@ -227,13 +224,6 @@ public class OpenViduService {
 				.isBroadcastingActive(openViduDto.isBroadcastingActive())
 				.session(SessionOutVo.of(openViduSession, getConnectionInfoList(openViduSession.getConnections())))
 				.build();
-
-
-		ThreadUtils.runTask(()->{
-			redisUtils.setObject(DataType.redisDataKey(sessionId, DataType.OPENVIDU), newOpenViduDto);
-			redisUtils.incrementUserCount(DataType.redisDataKey(sessionId, DataType.USER_COUNT), 1);
-			return true;
-		}, 10, 10, "Join User");
 
 		return newOpenViduDto;
 	}
@@ -468,8 +458,9 @@ public class OpenViduService {
 		throw new RetryException("Max retries exceeded");
 	}
 
-	public ConnectionOutVo getConnection(String sessionId, Long userIdx, String tokenType){
-		return redisUtils.getObject(sessionId+"_"+tokenType+"_"+userIdx, ConnectionOutVo.class);
+	public ConnectionOutVo getConnection(String sessionId, Long userIdx, DataType tokenType){
+		return redisUtils.getObject(DataType.redisDataTypeConnection(sessionId, String.valueOf(userIdx), tokenType), ConnectionOutVo.class);
+//		return redisUtils.getObject(sessionId+"_"+tokenType+"_"+userIdx, ConnectionOutVo.class);
 	}
 
 	public ConnectionOutVo createConnection(Session session, Long userIdx, OpenViduRole role, String tokenType)

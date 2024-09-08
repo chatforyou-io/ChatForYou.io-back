@@ -52,7 +52,7 @@ public class ChatRoomController {
             @PathVariable("sessionId") String sessionId) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
 
-        ChatRoomOutVo chatRoom = chatRoomService.getChatRoomBySessionId(sessionId);
+        ChatRoomOutVo chatRoom = chatRoomService.findChatRoomBySessionId(sessionId);
         response.put("result", "success");
         response.put("roomData", chatRoom);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -79,7 +79,7 @@ public class ChatRoomController {
 
     /**
      * 특정 세션 ID를 기반으로 채팅 방 삭제
-     *
+     * TODO creator 정보와 비교 필요
      * @param sessionId 삭제할 채팅방의 세션 ID
      * @return 삭제 성공 실패 여부
      * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
@@ -148,10 +148,10 @@ public class ChatRoomController {
      * @return 입장 결과를 포함한 ResponseEntity
      * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
      */
-    @PostMapping("/join/{sessionId}")
+    @GetMapping("/join/{sessionId}")
     public ResponseEntity<Map<String, Object>> joinChatRoom(
             @PathVariable("sessionId") String sessionId,
-            @RequestParam("user_idx") String userIdx) throws BadRequestException {
+            @RequestParam("user_idx") String userIdx) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException {
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         response.put("joinData", chatRoomService.joinChatRoom(sessionId, Long.parseLong(userIdx)));

@@ -17,7 +17,7 @@ public interface ChatRoomService {
     ChatRoomOutVo findChatRoomByRoomName(String roomName);
     Map<String, Object> joinChatRoom(String sessionId, Long userIdx) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException;
     Map<String, Object> getConnectionInfo(String sessionId, Long userId);
-    ChatRoomOutVo getChatRoomBySessionId(String sessionId) throws BadRequestException;
+    ChatRoomOutVo findChatRoomBySessionId(String sessionId) throws BadRequestException;
     Boolean checkRoomPassword(String sessionId, String pwd) throws BadRequestException;
     ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo chatRoomInVo) throws BadRequestException;
     boolean deleteChatRoom(String sessionId) throws OpenViduJavaClientException, OpenViduHttpException;
