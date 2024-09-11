@@ -6,6 +6,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -77,6 +78,7 @@ public class MailServiceImpl implements MailService {
                 .append("<h1> 언제나 즐거움을 선사하는 ChatForYou.io 입니다</h1>")
                 .append("<br>")
                 .append("<p>아래 코드를 회원가입 창으로 돌아가 입력해주세요<p>")
+                .append("<p>본 이메일은 발신 전용 이메일로, 회신이 불가능합니다. </p>")
                 .append("<br>")
                 .append("<br>")
                 .append("<br>")
@@ -99,7 +101,7 @@ public class MailServiceImpl implements MailService {
         messageHelper.setText(text, true); // 내용, charset 타입, subtype
 
         // 보내는 사람의 이메일 주소, 보내는 사람 이름
-        messageHelper.setFrom("chatforyou@mail.hjproject.kro.kr", "chatforyou_admin"); // 보내는 사람
+        messageHelper.setFrom("no-reply@chatforyou.io", "ChatForYou Support"); // 보내는 사람
 
         return message;
     }

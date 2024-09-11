@@ -65,6 +65,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         // 5. 새로운 room 저장
         ThreadUtils.runTask(() -> {
             redisUtils.setObject(DataType.redisDataType(chatRoom.getSessionId(), DataType.CHATROOM), chatRoom);
+            redisUtils.incrementUserCount(DataType.redisDataType(chatRoom.getSessionId(), DataType.USER_COUNT), 0);
+//            redisUtils.setObject(DataType.redisDataType(chatRoom.getSessionId(), DataType.USER_COUNT), 0);
             return true;
         }, 10, 10, "Create ChatRoom");
 
@@ -223,8 +225,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             log.info("===== Already Deleted ChatRoom ====");
         }
 
-        ThreadUtils.runTask(() -> redisUtils.deleteKeysByKey(sessionId), 10, 100, "Delete sessionInfo Job");
-        ThreadUtils.runTask(() -> openViduService.closeSession(sessionId), 10, 100, "Delete openvidu data Job");
+        ThreadUtils.runTask(() -> redisUtils.deleteKeysByKey(sessionId), 10, 100, "Delete sessionInfo ");
+        ThreadUtils.runTask(() -> openViduService.closeSession(sessionId), 10, 100, "Delete openvidu data ");
         return true;
     }
 

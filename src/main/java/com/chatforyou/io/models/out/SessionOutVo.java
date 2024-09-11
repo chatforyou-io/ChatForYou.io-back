@@ -45,4 +45,14 @@ public class SessionOutVo implements Serializable {
                 .broadcasting(session.isBeingBroadcasted())
                 .build();
     }
+
+    public static SessionOutVo of(SessionOutVo session, Map<String, ConnectionOutVo> connections){
+        return SessionOutVo.builder()
+                .sessionId(session.getSessionId())
+                .connections(connections)
+                .createdAt(session.getCreatedAt())
+                .recording(session.isRecording())
+                .broadcasting(session.isBroadcasting())
+                .build();
+    }
 }

@@ -5,12 +5,18 @@ import com.chatforyou.io.client.OpenViduJavaClientException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
  * FunctionalInterface 를 이용한 Thread Job 구현
  * ThreadUtils.runTask(()-> {job}, {retury}, {sleep}, {jobName});
  */
 @Slf4j
 public class ThreadUtils {
+
+    private static final ExecutorService executorService = Executors.newFixedThreadPool(10);
+
     private ThreadUtils(){
     }
 
@@ -28,7 +34,7 @@ public class ThreadUtils {
      * @param jobName job 이름
      */
     public static void runTask(Task task, int retry, long sleep, String jobName) {
-        Thread thread = new Thread(() -> {
+        executorService.submit (() -> {
             int attempts = 0;
             boolean isSuccess = false;
             while (attempts < retry && !isSuccess) {
@@ -66,6 +72,5 @@ public class ThreadUtils {
                 }
             }
         });
-        thread.start();
     }
 }

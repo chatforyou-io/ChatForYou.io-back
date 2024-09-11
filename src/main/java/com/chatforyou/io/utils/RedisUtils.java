@@ -240,8 +240,7 @@ public class RedisUtils {
         masterTemplate.executePipelined((RedisCallback<Object>) connection -> {
             masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.CHATROOM), chatRoom);
             masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.USER_LIST), userList);
-
-
+            this.decrementUserCount(DataType.redisDataType(sessionId, DataType.USER_COUNT), 1);
             return null;
         });
     }

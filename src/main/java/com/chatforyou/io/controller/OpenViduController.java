@@ -10,6 +10,7 @@ import com.chatforyou.io.utils.JsonUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +29,7 @@ public class OpenViduController {
 
     @PostMapping("/webhook")
     public void processOpenViduWebhook(
-            @RequestBody String requestBody) throws OpenViduJavaClientException, OpenViduHttpException {
+            @RequestBody String requestBody) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
 
         openViduWebhookService.processWebhookEvent(JsonUtils.jsonToObj(requestBody, OpenViduWebhookData.class));
     }
