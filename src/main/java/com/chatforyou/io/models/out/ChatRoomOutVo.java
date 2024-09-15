@@ -6,7 +6,9 @@ import com.chatforyou.io.utils.RedisUtils;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
+import java.io.Serializable;
 import java.util.List;
+import java.util.Set;
 
 @Builder
 @Getter
@@ -14,7 +16,8 @@ import java.util.List;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ToString
 @JsonIgnoreProperties({"pwd"})
-public class ChatRoomOutVo {
+public class ChatRoomOutVo implements Serializable {
+    private static final long serialVersionUID = 1L;
     private Long userIdx;
     private String creator;
     private String sessionId;
@@ -40,6 +43,21 @@ public class ChatRoomOutVo {
                 .useRtc(chatRoom.getUseRtc())
                 .currentUserCount(currentUserCount)
                 .maxUserCount(chatRoom.getMaxUserCount())
+                .build();
+    }
+
+    public static ChatRoomOutVo of(ChatRoomInVo chatRoomInVo, List<UserOutVo> list, int currentUserCount){
+        return ChatRoomOutVo.builder()
+                .sessionId(chatRoomInVo.getSessionId())
+                .creator(chatRoomInVo.getCreator())
+                .userIdx(chatRoomInVo.getUserIdx())
+                .roomName(chatRoomInVo.getRoomName())
+                .usePwd(chatRoomInVo.getUsePwd())
+                .usePrivate(chatRoomInVo.getUsePrivate())
+                .useRtc(chatRoomInVo.getUseRtc())
+                .currentUserCount(currentUserCount)
+                .maxUserCount(chatRoomInVo.getMaxUserCount())
+                .userList(list)
                 .build();
     }
 }

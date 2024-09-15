@@ -99,7 +99,7 @@ public class ChatRoomController {
      * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
      */
     @GetMapping("/list")
-    public ResponseEntity<Map<String, Object>> getChatRoomList() {
+    public ResponseEntity<Map<String, Object>> getChatRoomList() throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         response.put("roomList", chatRoomService.getChatRoomList());

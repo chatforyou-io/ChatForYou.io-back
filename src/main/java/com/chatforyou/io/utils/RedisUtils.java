@@ -2,7 +2,9 @@ package com.chatforyou.io.utils;
 
 import com.chatforyou.io.models.DataType;
 import com.chatforyou.io.models.OpenViduDto;
+import com.chatforyou.io.models.in.ChatRoomInVo;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
+import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -10,10 +12,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.lettuce.core.RedisException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Component;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -93,6 +99,12 @@ public class RedisUtils {
         }
     }
 
+    public void setObjectOpsHash(@NonNull String sessionId, DataType dataType, Object o) {
+        String redisKey = "sessionId:" + sessionId;
+
+        // Redis에 객체 저장
+        masterTemplate.opsForHash().put(redisKey, dataType.getType(), o);
+    }
 
     /**
      * Redis에서 키를 삭제
@@ -143,7 +155,7 @@ public class RedisUtils {
         Set<String> keys = new HashSet<>();
 
         // SCAN 옵션 설정 :: 와일드카드 검색할때는 뒤에 * 도 함께 붙여주자
-        ScanOptions scanOptions = ScanOptions.scanOptions().match(pattern+"*").count(100).build();
+        ScanOptions scanOptions = ScanOptions.scanOptions().match("*"+pattern+"*").count(100).build();
 
         // Redis 커넥션에서 커서를 사용해 SCAN 명령 실행
         try (Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(scanOptions)) {
@@ -163,8 +175,8 @@ public class RedisUtils {
      * @param key
      * @return
      */
-    public int incrementUserCount(String key, int count) {
-        return masterTemplate.opsForValue().increment(key, count).intValue();
+    public int incrementUserCount(String key, String field, int count) {
+        return masterTemplate.opsForHash().increment(key, field, count).intValue();
     }
 
     /**
@@ -172,8 +184,14 @@ public class RedisUtils {
      * @param key
      * @return
      */
-    public int decrementUserCount(String key, int count) {
-        return masterTemplate.opsForValue().decrement(key, count).intValue();
+    public int decrementUserCount(String key, String field, int count) {
+        return masterTemplate.opsForHash().increment(key, field, -(count)).intValue();
+    }
+
+    public int getUserCount(String sessionId){
+        String redisKey = "sessionId:"+sessionId;
+        Integer count = (Integer) slaveTemplate.opsForHash().get(redisKey, DataType.USER_COUNT.getType());
+        return count == null ? 0 : count;
     }
 
     /**
@@ -226,22 +244,100 @@ public class RedisUtils {
         }
     }
 
-    public void joinUserJob(String sessionId, ChatRoomOutVo chatRoom, List<UserOutVo> userList, OpenViduDto openViduDto){
-        masterTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.CHATROOM), chatRoom);
-            masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.USER_LIST), userList);
-            masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.OPENVIDU), openViduDto);
-            this.incrementUserCount(DataType.redisDataType(sessionId, DataType.USER_COUNT), 1);
-            return null; // 파이프라인에서 결과는 executePipelined 로 반환되므로 null 반환
-        });
+    public void createChatRoomJob(String sessionId, ChatRoomInVo chatRoomInVo, OpenViduDto openViduDto){
+        String redisKey = "sessionId:"+sessionId;
+        // 채팅방 객체 저장
+        masterTemplate.opsForHash().put(redisKey, DataType.CHATROOM.getType(), chatRoomInVo);
+        // OpenVidu 객체 저장
+        masterTemplate.opsForHash().put(redisKey, DataType.OPENVIDU.getType(), openViduDto);
+
     }
 
-    public void leftUserJob(String sessionId, ChatRoomOutVo chatRoom, List<UserOutVo> userList){
-        masterTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.CHATROOM), chatRoom);
-            masterTemplate.opsForValue().set(DataType.redisDataType(sessionId, DataType.USER_LIST), userList);
-            this.decrementUserCount(DataType.redisDataType(sessionId, DataType.USER_COUNT), 1);
-            return null;
-        });
+    public void joinUserJob(String sessionId, UserOutVo user, OpenViduDto openViduDto){
+        String redisKey = "sessionId:"+sessionId;
+        // OpenVidu 객체 저장
+        masterTemplate.opsForHash().put(redisKey, DataType.OPENVIDU.getType(), openViduDto);
+        // 유저 수 증가
+        this.incrementUserCount(redisKey, DataType.USER_COUNT.getType(), 1);
+        // userList 에 추가
+        String userListKey = redisKey + ":userList";
+        // Set에 유저 추가
+        masterTemplate.opsForSet().add(userListKey, user);
+    }
+
+    public void leftUserJob(String sessionId, OpenViduDto openViduDto, UserOutVo leftUser){
+        String redisKey = "sessionId:"+sessionId;
+
+        // OpenVidu 객체 저장
+        masterTemplate.opsForHash().put(redisKey, DataType.OPENVIDU.getType(), openViduDto);
+        // 유저 수 감소
+        this.decrementUserCount(redisKey, DataType.USER_COUNT.getType(), 1);
+        // userList 에서 제거
+        String userListKey = redisKey + ":userList";
+        masterTemplate.opsForSet().remove(userListKey, leftUser);
+    }
+
+    public <T> T getRedisDataByDataType(String sessionId, DataType dataType, Class<T> clazz) throws BadRequestException {
+        String redisKey = null;
+        if (sessionId.contains("sessionId:")) {
+            redisKey = sessionId;
+        } else {
+            redisKey = "sessionId:"+sessionId;
+        }
+        switch (dataType){
+            case CHATROOM :
+                return clazz.cast(slaveTemplate.opsForHash().get(redisKey, DataType.CHATROOM.getType()));
+            case OPENVIDU:
+                return clazz.cast(slaveTemplate.opsForHash().get(redisKey, DataType.OPENVIDU.getType()));
+            case USER_LIST:
+                String userListKey = redisKey + ":userList";
+                return clazz.cast(slaveTemplate.opsForSet().members(userListKey).stream().toList());
+            default:
+                throw new BadRequestException("Dose Not Exist DataType");
+        }
+    }
+
+    public Map<Object, Object> getAllChatRoomData(String sessionId){
+        String redisKey = null;
+        if (sessionId.contains("sessionId:")) {
+            redisKey = sessionId;
+        } else {
+            redisKey = "sessionId:"+sessionId;
+        }
+        return slaveTemplate.opsForHash().entries(redisKey);
+    }
+
+    public void saveConnectionTokens(String sessionId, String userId, ConnectionOutVo cameraToken, ConnectionOutVo screenToken) {
+        String redisKey = "sessionId:" + sessionId;
+
+        // 유저별 토큰 정보 저장
+        Map<String, ConnectionOutVo> putMap = new HashMap<>();
+        putMap.put(DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA), cameraToken);
+        putMap.put(DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN), screenToken);
+        masterTemplate.opsForHash().putAll(redisKey, putMap);
+//        masterTemplate.opsForHash().put(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA), cameraToken);
+//        masterTemplate.opsForHash().put(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN), screenToken);
+    }
+
+    public void deleteConnectionTokens(String sessionId, String userId) {
+        String redisKey = "sessionId:" + sessionId;
+        // 유저별 토큰 정보 제거
+        masterTemplate.opsForHash().delete(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA), DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN));
+//        masterTemplate.opsForHash().delete(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA));
+//        masterTemplate.opsForHash().delete(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN));
+    }
+
+    public Map<String, ConnectionOutVo> getConnectionTokens(String sessionId, String userId) {
+        // 유저별 토큰 정보 조회
+        String redisKey = "sessionId:"+sessionId;
+        Map<Object, Object> entries = slaveTemplate.opsForHash().entries(redisKey);
+        Map<String, ConnectionOutVo> tokenMap = new HashMap<>();
+//        ConnectionOutVo cameraToken = (ConnectionOutVo) slaveTemplate.opsForHash().get(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA));
+//        ConnectionOutVo screenToken = (ConnectionOutVo) slaveTemplate.opsForHash().get(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN));
+
+        tokenMap.put("cameraToken", (ConnectionOutVo) entries.get(DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA)));
+        tokenMap.put("screenToken", (ConnectionOutVo) entries.get(DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN)));
+
+        return tokenMap;
     }
 }

@@ -8,7 +8,9 @@ import lombok.*;
 @Getter
 @ToString
 public class ChatRoomInVo {
+    private String sessionId;
     private Long userIdx;
+    private String creator;
     private String roomName;
     private String pwd;
     private Boolean usePwd;
@@ -17,4 +19,8 @@ public class ChatRoomInVo {
     private String desc;
     private Integer maxUserCount;
 
+    public void setSessionIdAndCreator(String sessionId, String creator){
+        this.sessionId = sessionId;
+        this.creator = creator;
+    }
 }

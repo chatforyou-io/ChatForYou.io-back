@@ -91,6 +91,7 @@ public class OpenViduService {
 			boolean hasValidToken = hasModeratorValidToken || hasParticipantValidToken;
 			ConnectionOutVo cameraConnection = this.createConnection(openViduSession, userIdx, OpenViduRole.MODERATOR, "camera");
 			ConnectionOutVo screenConnection = this.createConnection(openViduSession, userIdx, OpenViduRole.MODERATOR, "screen");
+			saveUserConnection(userIdx, sessionId, cameraConnection, screenConnection);
 
 			openViduDto = OpenViduDto.builder()
 					.creator(chatRoom.getUser().getNickName())
@@ -139,13 +140,25 @@ public class OpenViduService {
 			throw new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR);
 //			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
-		redisUtils.setObject(DataType.redisDataType(chatRoom.getSessionId(), DataType.OPENVIDU), openViduDto);
+//		redisUtils.setObject(DataType.redisDataType(chatRoom.getSessionId(), DataType.OPENVIDU), openViduDto);
 		return openViduDto;
+	}
+
+	private void saveUserConnection(Long userIdx, String sessionId, ConnectionOutVo cameraConnection, ConnectionOutVo screenConnection) {
+		ThreadUtils.runTask(()->{
+			try{
+				redisUtils.saveConnectionTokens(sessionId, String.valueOf(userIdx), cameraConnection, screenConnection);
+				return true;
+			}catch (Exception e){
+				log.error("Unknown Exception occurred :: {} : {}", e.getMessage(), e);
+				return false;
+			}
+		}, 10, 100, "Save User Token");
 	}
 
 	public OpenViduDto joinOpenviduRoom(String sessionId, User joinUser) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException {
 		Session openViduSession = this.openvidu.getActiveSession(sessionId);
-		OpenViduDto openViduDto = redisUtils.getObject(DataType.redisDataType(sessionId, DataType.OPENVIDU), OpenViduDto.class);
+		OpenViduDto openViduDto = redisUtils.getRedisDataByDataType(sessionId, DataType.OPENVIDU, OpenViduDto.class);
 		if (Objects.isNull(openViduSession) || Objects.isNull(openViduDto)) {
 			throw new BadRequestException("Unknown Openvidu Session");
 		}
@@ -177,7 +190,7 @@ public class OpenViduService {
 			OpenViduRole role = isSessionCreator ? OpenViduRole.MODERATOR : OpenViduRole.PUBLISHER;
 			ConnectionOutVo cameraConnection = this.createConnection(openViduSession, joinUser.getIdx(), role, "camera");
 			ConnectionOutVo screenConnection = this.createConnection(openViduSession, joinUser.getIdx(), role, "screen");
-
+			saveUserConnection(joinUser.getIdx(), sessionId, cameraConnection, screenConnection);
 			if (!hasValidToken && PRIVATE_FEATURES_ENABLED) {
 				/**
 				 * ! *********** WARN *********** !
@@ -458,15 +471,13 @@ public class OpenViduService {
 		throw new RetryException("Max retries exceeded");
 	}
 
-	public ConnectionOutVo getConnection(String sessionId, Long userIdx, DataType tokenType){
-		return redisUtils.getObject(DataType.redisDataTypeConnection(sessionId, String.valueOf(userIdx), tokenType), ConnectionOutVo.class);
-//		return redisUtils.getObject(sessionId+"_"+tokenType+"_"+userIdx, ConnectionOutVo.class);
+	public Map<String, ConnectionOutVo> getConnection(String sessionId, Long userIdx){
+		return redisUtils.getConnectionTokens(sessionId, String.valueOf(userIdx));
 	}
 
 	public ConnectionOutVo createConnection(Session session, Long userIdx, OpenViduRole role, String tokenType)
 			throws OpenViduJavaClientException, OpenViduHttpException, RetryException, InterruptedException {
 		ConnectionOutVo connectionOutVo = ConnectionOutVo.of(createConnection(session, tokenType + "_" + userIdx, role, new RetryOptions()));
-		redisUtils.setObject(session.getSessionId()+"_"+tokenType+"_"+userIdx, connectionOutVo);
 		return connectionOutVo;
 	}
 

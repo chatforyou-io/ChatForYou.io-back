@@ -12,8 +12,8 @@ import java.util.Map;
 
 public interface ChatRoomService {
     ChatRoomOutVo createChatRoom(ChatRoomInVo chatRoomInVo) throws BadRequestException;
-    OpenViduDto getOpenviduDataBySessionId(String sessionId);
-    List<ChatRoomOutVo> getChatRoomList();
+    OpenViduDto getOpenviduDataBySessionId(String sessionId) throws BadRequestException;
+    List<ChatRoomOutVo> getChatRoomList() throws BadRequestException;
     ChatRoomOutVo findChatRoomByRoomName(String roomName);
     Map<String, Object> joinChatRoom(String sessionId, Long userIdx) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException;
     Map<String, Object> getConnectionInfo(String sessionId, Long userId);
