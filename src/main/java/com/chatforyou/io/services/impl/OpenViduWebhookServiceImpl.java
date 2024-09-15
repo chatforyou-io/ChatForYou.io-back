@@ -4,8 +4,11 @@ import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.DataType;
+import com.chatforyou.io.models.OpenViduDto;
 import com.chatforyou.io.models.OpenViduWebhookData;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
+import com.chatforyou.io.models.out.ConnectionOutVo;
+import com.chatforyou.io.models.out.SessionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.ChatRoomService;
@@ -19,8 +22,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -34,26 +39,24 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
 
     @Override
     public void processWebhookEvent(OpenViduWebhookData webhookData) throws OpenViduJavaClientException, OpenViduHttpException {
+        log.info("====== WebHookData ::: {}", webhookData.toString());
+
         String sessionId = webhookData.getSessionId();
         ChatRoomOutVo chatRoom = null;
+        OpenViduDto openViduDto = null;
         try {
-            chatRoomService.findChatRoomBySessionId(sessionId);
-        } catch (Exception e) {
-            log.warn("ChatRoom does not Exist :: {}", sessionId);
-        }
+            chatRoom = chatRoomService.findChatRoomBySessionId(sessionId);
+            openViduDto = redisUtils.getRedisDataByDataType(sessionId, DataType.OPENVIDU, OpenViduDto.class);
 
-        log.info("====== WebHookData ::: {}", webhookData.toString());
+        } catch (Exception e) {
+            log.warn("Does not Exist ChatRoom or OpenViduData :: {} :: {}", sessionId, e.getMessage());
+        }
 
         switch (webhookData.getEvent()) {
             case PARTICIPANT_LEFT:  // 유저 접속 종료
                 String connectionId = webhookData.getConnectionId();
                 Long userIdx = Long.parseLong(connectionId.split("_")[2]);
-                if (connectionId.contains("camera")) {
-
-                } else {
-
-                }
-                processParticipantLeftEvent(sessionId, chatRoom, userIdx);
+                processParticipantLeftEvent(userIdx, sessionId, openViduDto);
                 break;
             case SESSION_DESTROYED: // session 삭제
                 chatRoomService.deleteChatRoom(sessionId);
@@ -62,54 +65,43 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
 
     }
 
-    private void processParticipantLeftEvent(String sessionId, ChatRoomOutVo chatRoom, Long userIdx) {
-        User user = userRepository.findUserByIdx(userIdx)
+    private void processParticipantLeftEvent(Long userIdx, String sessionId, OpenViduDto openViduDto) {
+        User leftUser = userRepository.findUserByIdx(userIdx)
                 .orElseThrow(() -> new EntityNotFoundException("Can not find User"));
 
-        //
-        ThreadUtils.runTask(() ->
-                        redisUtils.deleteKeysByKey(DataType.redisDataTypeConnection(sessionId, String.valueOf(userIdx), DataType.CONNECTION_CAMERA)),
-                10, 100, "Delete Participant Connection " + DataType.CONNECTION_CAMERA.toString()
+        // redis 에서 유저 connection token 정보 삭제
+        ThreadUtils.runTask(() -> {
+            try{
+                redisUtils.deleteConnectionTokens(sessionId, String.valueOf(userIdx));
+                return true;
+            } catch (Exception e){
+                log.error("Unknown Internal Server Error occurred :: {} :: {}", e.getMessage(), e);
+                return false;
+            }
+                },10, 100, "Delete Participant Connection " + DataType.CONNECTION_CAMERA.toString()
         );
 
-        ThreadUtils.runTask(() ->
-                        redisUtils.deleteKeysByKey(DataType.redisDataTypeConnection(sessionId, String.valueOf(userIdx), DataType.CONNECTION_SCREEN)),
-                10, 100, "Delete Participant Connection " + DataType.CONNECTION_SCREEN.toString()
-        );
+        Map<String, ConnectionOutVo> updatedConnections = openViduDto.getSession().getConnections();
+        updatedConnections.remove("con_camera_"+userIdx);
+        updatedConnections.remove("con_screen_"+userIdx);
+        OpenViduDto updatedOpenViduData = OpenViduDto.builder()
+                .creator(openViduDto.getCreator())
+                .isBroadcastingActive(openViduDto.isBroadcastingActive())
+                .isRecordingActive(openViduDto.isRecordingActive())
+                .broadcastingEnabled(openViduDto.isBroadcastingEnabled())
+                .recordingEnabled(openViduDto.isRecordingEnabled())
+                .session(SessionOutVo.of(openViduDto.getSession(), updatedConnections))
+                .build();
 
-
-        // chatroom 에서 유저 정보 제거
-        List<UserOutVo> userList = redisUtils.getObject(DataType.redisDataType(sessionId, DataType.USER_LIST), List.class);
-        boolean isDelete = false;
-        if (!CollectionUtils.isEmpty(userList)) {
-            Iterator<UserOutVo> iterator = userList.iterator();
-
-            // Iterator 사용하여 리스트 순회
-            while (iterator.hasNext()) {
-                UserOutVo userOutVo = iterator.next();
-
-                // 유저의 IDX가 일치하는지 확인
-                if (userOutVo.getIdx() == user.getIdx()) {
-                    iterator.remove();
-                    isDelete = true;
-                    break;
-                }
+        ThreadUtils.runTask(() -> {
+            try {
+                redisUtils.leftUserJob(sessionId, updatedOpenViduData, UserOutVo.of(leftUser, false));
+                return true;
+            } catch (Exception e) {
+                log.error("Unknown Exception :: {} : {}", e.getMessage(), e);
+                return false;
             }
+        }, 10, 100, "Left User");
 
-            // 변경된 유저 리스트를 Redis에 다시 저장
-            if (isDelete) {
-                chatRoom.setUserList(userList);
-                chatRoom.setCurrentUserCount(CollectionUtils.isEmpty(userList) ? 0 : userList.size());
-                ThreadUtils.runTask(() -> {
-                    try {
-                        redisUtils.leftUserJob(sessionId, chatRoom, userList);
-                        return true;
-                    } catch (Exception e) {
-                        log.error("Unknown Exception :: {} : {}", e.getMessage(), e);
-                        return false;
-                    }
-                }, 10, 10, "Left User");
-            }
-        }
     }
 }
