@@ -13,13 +13,11 @@ import io.lettuce.core.RedisException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Component;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -189,7 +187,7 @@ public class RedisUtils {
     }
 
     public int getUserCount(String sessionId){
-        String redisKey = "sessionId:"+sessionId;
+        String redisKey = this.makeRedisKey(sessionId);
         Integer count = (Integer) slaveTemplate.opsForHash().get(redisKey, DataType.USER_COUNT.getType());
         return count == null ? 0 : count;
     }
@@ -199,17 +197,20 @@ public class RedisUtils {
      * @return List<String> - 값이 0인 키들의 목록
      */
     public List<String> getSessionListForDelete() {
-        String pattern = "*_"+ DataType.USER_COUNT+"*";
+        String pattern = "*sessionId:"+"*";
         List<String> sessionList = new ArrayList<>();
         ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
 
         Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options);
 
         while (cursor.hasNext()) {
-            String key = new String(cursor.next()).replace("\"", "");
-            int userCount = (int)slaveTemplate.opsForValue().get(key);
+            String key = new String(cursor.next()).replace("\"", "").replace("sessionId:", "");
+            if (key.contains("userList")) {
+                continue;
+            }
+            int userCount = this.getUserCount(key);
             if (0 == userCount) {
-                sessionList.add(key.split("_")[0]);
+                sessionList.add(key);
             }
         }
 
@@ -278,12 +279,7 @@ public class RedisUtils {
     }
 
     public <T> T getRedisDataByDataType(String sessionId, DataType dataType, Class<T> clazz) throws BadRequestException {
-        String redisKey = null;
-        if (sessionId.contains("sessionId:")) {
-            redisKey = sessionId;
-        } else {
-            redisKey = "sessionId:"+sessionId;
-        }
+        String redisKey = makeRedisKey(sessionId);
         switch (dataType){
             case CHATROOM :
                 return clazz.cast(slaveTemplate.opsForHash().get(redisKey, DataType.CHATROOM.getType()));
@@ -297,13 +293,19 @@ public class RedisUtils {
         }
     }
 
-    public Map<Object, Object> getAllChatRoomData(String sessionId){
-        String redisKey = null;
+    @NotNull
+    private String makeRedisKey(String sessionId) {
+        String redisKey;
         if (sessionId.contains("sessionId:")) {
             redisKey = sessionId;
         } else {
-            redisKey = "sessionId:"+sessionId;
+            redisKey = "sessionId:"+ sessionId;
         }
+        return redisKey;
+    }
+
+    public Map<Object, Object> getAllChatRoomData(String sessionId){
+        String redisKey = this.makeRedisKey(sessionId);
         return slaveTemplate.opsForHash().entries(redisKey);
     }
 
