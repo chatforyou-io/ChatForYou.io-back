@@ -31,7 +31,7 @@ class ChatRoomServiceImplTest {
     @DisplayName("방 저장 테스트")
     void createChatRoom() throws BadRequestException {
         ChatRoomInVo chatRoomInVo = ChatRoomInVo.builder()
-                .creator("wkdtpwhs@naver.com")
+                .userIdx(22L)
                 .roomName("test방")
                 .usePwd(false)
                 .usePrivate(true)
