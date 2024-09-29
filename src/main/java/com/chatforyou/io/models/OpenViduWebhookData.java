@@ -1,7 +1,6 @@
 package com.chatforyou.io.models;
 
 import lombok.*;
-import java.util.Map;
 
 @Getter
 @ToString
@@ -23,10 +22,20 @@ public class OpenViduWebhookData {
     private String connection;
     private String videoSource;
     private int videoFramerate;
-    private Map<String, Integer> videoDimensions;
     private boolean audioEnabled;
     private boolean videoEnabled;
     private long startTime;
     private int duration;
     private String reason;
+    private String receivingFrom;
+    private VideoDimensions videoDimensions;
+
+    @Getter
+    @ToString
+    @AllArgsConstructor
+    @NoArgsConstructor
+    private class VideoDimensions{
+        private int width;
+        private int height;
+    }
 }

@@ -1,5 +1,6 @@
 package com.chatforyou.io.models.in;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
 @Builder
@@ -7,6 +8,7 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @ToString
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatRoomInVo {
     private String sessionId;
     private Long userIdx;

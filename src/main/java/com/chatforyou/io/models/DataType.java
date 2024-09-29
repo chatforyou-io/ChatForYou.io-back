@@ -4,14 +4,15 @@ import lombok.Getter;
 
 @Getter
 public enum DataType {
-    CHATROOM("chatroom", 01),
-    OPENVIDU("openvidu", 02),
+    CHATROOM("chatroom", 1),
+    OPENVIDU("openvidu", 2),
 //    CONNECTION_TOKEN(03),
-    CONNECTION_CAMERA("camera", 03),
-    CONNECTION_SCREEN("screen", 04),
-    CONNECTION_TOKENS("tokens", 05),
-    USER_COUNT("user_count", 06),
-    USER_LIST("user_list", 07)
+    CONNECTION_CAMERA("camera", 3),
+    CONNECTION_SCREEN("screen", 4),
+    CONNECTION_TOKENS("tokens", 5),
+    USER_COUNT("user_count", 6),
+    USER_LIST("user_list", 7),
+    FAVORITES("favorites", 8)
     ;
 
     private final int code;
