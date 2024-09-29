@@ -188,8 +188,8 @@ public class OpenViduService {
 			boolean iAmTheFirstConnection = !StringUtil.isNullOrEmpty(creator) && creator.equals(joinUser.getNickName());
 			boolean isSessionCreator = hasModeratorValidToken || iAmTheFirstConnection;
 			OpenViduRole role = isSessionCreator ? OpenViduRole.MODERATOR : OpenViduRole.PUBLISHER;
-			ConnectionOutVo cameraConnection = this.createConnection(openViduSession, joinUser.getIdx(), role, "camera");
-			ConnectionOutVo screenConnection = this.createConnection(openViduSession, joinUser.getIdx(), role, "screen");
+			ConnectionOutVo cameraConnection = this.createConnection(openViduSession, joinUser.getIdx(), OpenViduRole.MODERATOR, "camera");
+			ConnectionOutVo screenConnection = this.createConnection(openViduSession, joinUser.getIdx(), OpenViduRole.MODERATOR, "screen");
 			saveUserConnection(joinUser.getIdx(), sessionId, cameraConnection, screenConnection);
 			if (!hasValidToken && PRIVATE_FEATURES_ENABLED) {
 				/**
