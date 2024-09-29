@@ -159,8 +159,9 @@ public class RedisConfig {
 
         // 인덱스 스키마 정의
         Schema schema = new Schema()
-                .addField(new TextField("creator"))
-                .addField(new TextField("roomName"))
+                .addField(new TextField("sessionId"))
+                .addField(new TextField("creator").noStem())
+                .addField(new TextField("roomName").noStem())
                 .addField(new Field("currentTime", FieldType.NUMERIC));
 
         // 인덱스 생성 (존재하지 않을 경우에만 생성)

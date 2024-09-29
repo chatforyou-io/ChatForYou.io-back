@@ -23,7 +23,7 @@ public class ExceptionController {
         Map<String, String> response = new HashMap<>();
         response.put("error", "can not find info");
         response.put("message", ex.getMessage());
-        log.info("========= exception ======== {}", ex.getMessage());
+        log.error("UnauthorizedException: {} :: {}", ex.getMessage(), ex);
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
@@ -32,7 +32,7 @@ public class ExceptionController {
         Map<String, String> response = new HashMap<>();
         response.put("error", "Bad Request");
         response.put("message", ex.getMessage());
-        log.info("========= exception ======== {}", ex.getMessage());
+        log.error("UnauthorizedException: {} :: {}", ex.getMessage(), ex);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
@@ -41,7 +41,7 @@ public class ExceptionController {
         Map<String, String> response = new HashMap<>();
         response.put("error", "Internal Server Error");
         response.put("message", ex.getMessage());
-        log.error("RuntimeException: {}", ex.getMessage(), ex);
+        log.error("RuntimeException: {} :: {}", ex.getMessage(), ex);
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -50,7 +50,7 @@ public class ExceptionController {
         Map<String, String> response = new HashMap<>();
         response.put("error", "Unauthorized");
         response.put("message", ex.getMessage());
-        log.error("UnauthorizedException: {}", ex.getMessage(), ex);
+        log.error("Unauthorized: {} :: {}", ex.getMessage(), ex);
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 
@@ -59,7 +59,7 @@ public class ExceptionController {
         Map<String, String> response = new HashMap<>();
         response.put("error", "Unauthorized");
         response.put("message", ex.getMessage());
-        log.error("UnauthorizedException: {}", ex.getMessage(), ex);
+        log.error("IllegalArgumentException: {} :: {}", ex.getMessage(), ex);
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

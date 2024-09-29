@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -61,8 +63,9 @@ public class ChatRoomController {
     /**
      * 특정 세션 ID를 기반으로 채팅방 정보를 수정
      *
-     * @param sessionId 조회할 채팅방의 세션 ID
-     * @return 채팅방 정보를 포함한 ResponseEntity
+     * @param sessionId 수정할 채팅방의 세션 ID
+     * @param chatRoomInVo 수정할 정보를 담고 있는 객체
+     * @return 수정된 채팅방 정보를 포함한 ResponseEntity
      * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
      */
     @PatchMapping("/update/{sessionId}")
@@ -81,8 +84,10 @@ public class ChatRoomController {
      * 특정 세션 ID를 기반으로 채팅 방 삭제
      * TODO creator 정보와 비교 필요
      * @param sessionId 삭제할 채팅방의 세션 ID
-     * @return 삭제 성공 실패 여부
+     * @return 삭제 성공 여부를 포함한 ResponseEntity
      * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     * @throws OpenViduJavaClientException OpenVidu 클라이언트 관련 예외
+     * @throws OpenViduHttpException OpenVidu HTTP 요청 관련 예외
      */
     @DeleteMapping("/delete/{sessionId}")
     public ResponseEntity<Map<String, Object>> deleteChatRoom(
@@ -95,14 +100,23 @@ public class ChatRoomController {
     /**
      * 모든 채팅방 목록을 조회
      *
+     * @param keyword 검색 키워드 (선택 사항)
+     * @param pageNumStr 페이지 번호 (기본값 0)
+     * @param pageSizeStr 페이지 크기 (기본값 9)
      * @return 채팅방 목록을 포함한 ResponseEntity
      * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
      */
     @GetMapping("/list")
-    public ResponseEntity<Map<String, Object>> getChatRoomList() throws BadRequestException {
-        Map<String, Object> response = new HashMap<>();
+    public ResponseEntity<Map<String, Object>> getChatRoomList(
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "0") String pageNumStr,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "9") String pageSizeStr
+    ) throws BadRequestException {
+        Map<String, Object> response = new LinkedHashMap<>();
+        List<ChatRoomOutVo> chatRoomList = chatRoomService.getChatRoomList(keyword, Integer.parseInt(pageNumStr), Integer.parseInt(pageSizeStr));
         response.put("result", "success");
-        response.put("roomList", chatRoomService.getChatRoomList());
+        response.put("count", chatRoomList.size());
+        response.put("roomList", chatRoomList);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -147,6 +161,8 @@ public class ChatRoomController {
      * @param userIdx 입장할 사용자 인덱스
      * @return 입장 결과를 포함한 ResponseEntity
      * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     * @throws OpenViduJavaClientException OpenVidu 클라이언트 관련 예외
+     * @throws OpenViduHttpException OpenVidu HTTP 요청 관련 예외
      */
     @GetMapping("/join/{sessionId}")
     public ResponseEntity<Map<String, Object>> joinChatRoom(

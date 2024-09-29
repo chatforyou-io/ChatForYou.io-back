@@ -1,26 +1,34 @@
 package com.chatforyou.io.utils;
 
+import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.models.DataType;
 import com.chatforyou.io.models.OpenViduDto;
 import com.chatforyou.io.models.in.ChatRoomInVo;
-import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.dengliming.redismodule.redisearch.RediSearch;
+import io.github.dengliming.redismodule.redisearch.client.RediSearchClient;
+import io.github.dengliming.redismodule.redisearch.index.Document;
+import io.github.dengliming.redismodule.redisearch.search.SearchOptions;
+import io.github.dengliming.redismodule.redisearch.search.SortBy;
 import io.lettuce.core.RedisException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.jetbrains.annotations.NotNull;
+import org.redisson.api.SortOrder;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 
 @Component
@@ -30,14 +38,16 @@ public class RedisUtils {
     private final RedisTemplate<String, Object> masterTemplate;
     private final RedisTemplate<String, Object> slaveTemplate;
     private final ObjectMapper objectMapper;
+    private final RediSearchClient rediSearchClient;
 
     public RedisUtils(
             @Qualifier("masterRedisTemplate") RedisTemplate<String, Object> masterTemplate,
             @Qualifier("slaveRedisTemplate") RedisTemplate<String, Object> slaveTemplate,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper, RediSearchClient rediSearchClient) {
         this.masterTemplate = masterTemplate;
         this.slaveTemplate = slaveTemplate;
         this.objectMapper = objectMapper;
+        this.rediSearchClient = rediSearchClient;
     }
 
 
@@ -196,7 +206,7 @@ public class RedisUtils {
      * user_count 값이 0인 키들을 검색한다
      * @return List<String> - 값이 0인 키들의 목록
      */
-    public List<String> getSessionListForDelete() {
+    public List<String> getSessionListForDelete() throws BadRequestException {
         String pattern = "*sessionId:"+"*";
         List<String> sessionList = new ArrayList<>();
         ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
@@ -211,7 +221,13 @@ public class RedisUtils {
             int userCount = this.getUserCount(key);
             if (0 == userCount) {
                 sessionList.add(key);
+                continue;
             }
+            List userList = this.getRedisDataByDataType(key, DataType.USER_LIST, List.class);
+            if (CollectionUtils.isEmpty(userList)) {
+                sessionList.add(key);
+            }
+
         }
 
         return sessionList;
@@ -249,9 +265,12 @@ public class RedisUtils {
         String redisKey = "sessionId:"+sessionId;
         // 채팅방 객체 저장
         masterTemplate.opsForHash().put(redisKey, DataType.CHATROOM.getType(), chatRoomInVo);
+        masterTemplate.opsForHash().put(redisKey, "sessionId", sessionId);
+        masterTemplate.opsForHash().put(redisKey, "creator", chatRoomInVo.getCreator());
+        masterTemplate.opsForHash().put(redisKey, "roomName", chatRoomInVo.getRoomName());
+        masterTemplate.opsForHash().put(redisKey, "currentTime", new Date().getTime());
         // OpenVidu 객체 저장
         masterTemplate.opsForHash().put(redisKey, DataType.OPENVIDU.getType(), openViduDto);
-
     }
 
     public void joinUserJob(String sessionId, UserOutVo user, OpenViduDto openViduDto){
@@ -342,4 +361,53 @@ public class RedisUtils {
 
         return tokenMap;
     }
+
+    public void addFavoriteRoom(String userId, String roomId) {
+        String redisKey = userId + ":" + DataType.FAVORITES.getType();
+        masterTemplate.opsForZSet().add(redisKey, roomId, new Date().getTime());
+    }
+
+    public void removeFavoriteRoom(String userId, String roomId) {
+        String redisKey = userId + ":" + DataType.FAVORITES.getType();
+        masterTemplate.opsForZSet().remove(redisKey, roomId);
+    }
+
+    public Set<String> getFavoriteRoomList(String userId){
+        String redisKey = userId + ":" + DataType.FAVORITES.getType();
+        // Object 타입을 String 타입으로 변환
+        Set<String> favoriteRooms = slaveTemplate.opsForZSet().reverseRange(redisKey, 0, -1).stream()
+                .map(Object::toString)
+                .collect(Collectors.toSet());
+
+        return favoriteRooms;
+    }
+
+    public List<Document> getRoomListByKeyword(String keyword, int pageNum, int pageSize){
+        // 검색 실행
+        RediSearch chatRoomSearch = rediSearchClient.getRediSearch("chatRoomIndex");
+        // Redis 검색 결과에서 openvidu 필드의 JSON 문자열 가져오기
+//        int pageNumber = 0;  // 원하는 페이지 번호
+//        int pageSize = 5;    // 한 페이지에 표시할 항목 수
+        String queryParam = "*";
+        if (!StringUtil.isNullOrEmpty(keyword)) {
+            queryParam = "@creator:*"+keyword+"* | @roomName:*"+keyword+"*";
+        }
+
+        // TODO 성능 테스트 후 삭제 필요
+//        List<Document> documents = chatRoomSearch.search(
+//                queryParam,
+//                new SearchOptions().page(pageNum * pageSize, pageSize).sort(new SortBy("currentTime", SortOrder.DESC))
+//        ).getDocuments();
+
+        List<Document> documents = chatRoomSearch.search(
+                queryParam,
+                new SearchOptions()
+                        .page(pageNum * pageSize, pageSize)  // 페이지 설정
+                        .returnFields("sessionId")  // sessionId 필드만 반환
+                        .sort(new SortBy("currentTime", SortOrder.DESC))  // currentTime 기준 내림차순 정렬
+        ).getDocuments();
+
+        return documents;
+    }
+
 }

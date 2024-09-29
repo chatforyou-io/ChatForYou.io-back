@@ -6,6 +6,7 @@ import com.chatforyou.io.services.ChatRoomService;
 import com.chatforyou.io.utils.RedisUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +23,7 @@ public class ChatRoomBatch {
 
     @Scheduled(cron = "0 0,30 * * * *", zone = "Asia/Seoul")
 //    @Scheduled(cron = "*/10 * * * * *", zone = "Asia/Seoul")
-    public void chatRoomScheduledJob() throws OpenViduJavaClientException, OpenViduHttpException {
+    public void chatRoomScheduledJob() throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
         log.info("=== ChatRoom Batch Job Start :: {} ==== ", sdf.format(new Date().getTime()));
         List<String> sessionList = redisUtils.getSessionListForDelete();

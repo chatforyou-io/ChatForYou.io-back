@@ -17,26 +17,23 @@ import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.ChatRoomService;
 import com.chatforyou.io.services.OpenViduService;
+import com.chatforyou.io.utils.JsonUtils;
 import com.chatforyou.io.utils.RedisUtils;
 import com.chatforyou.io.utils.ThreadUtils;
+import io.github.dengliming.redismodule.redisearch.index.Document;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ChatRoomServiceImpl implements ChatRoomService {
-    // TODO sessionID 에 인덱스 걸어두기
-    // TODO 굳이 openvidu 에 connection 을 저장할 필요가 있는가??
 
     private final ChatRoomRepository chatRoomRepository;
     private final UserRepository userRepository;
@@ -83,48 +80,50 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    public List<ChatRoomOutVo> getChatRoomList() throws BadRequestException {
+    public List<ChatRoomOutVo> getChatRoomList(String keyword, int pageNum, int pageSize) throws BadRequestException {
         List<ChatRoomOutVo> chatRoomList = new ArrayList<>();
-        List<String> keys = filterKeys(redisUtils.getKeysByPattern("sessionId:"));
-        for (String key : keys) {
-            key = key.replace("\"", "");
-            Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(key);
+        pageNum = pageNum !=0 ? pageNum - 1 : pageNum;
+        List<Document> roomList = redisUtils.getRoomListByKeyword(keyword, pageNum, pageSize);
+        for (Document document : roomList) {
+            String sessionId = document.getFields().get("sessionId").toString().replace("\"", "");
+            Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(sessionId);
             if (allChatRoomData.isEmpty() || allChatRoomData.get(DataType.CHATROOM.getType()) == null) {
-                continue;
+                throw new BadRequestException("Can not find ChatRoom");
             }
             ChatRoomInVo chatRoom = (ChatRoomInVo) allChatRoomData.get(DataType.CHATROOM.getType());
             Integer currentUserCount = (Integer) allChatRoomData.get(DataType.USER_COUNT.getType());
             currentUserCount = currentUserCount == null ? 0 : currentUserCount;
-            List userList = redisUtils.getRedisDataByDataType(key, DataType.USER_LIST, List.class);
+            List userList = redisUtils.getRedisDataByDataType(sessionId, DataType.USER_LIST, List.class);
 
             chatRoomList.add(ChatRoomOutVo.of(chatRoom, userList, currentUserCount));
         }
-
-        return chatRoomList;
-    }
-
-    private List<String> filterKeys(Set<String> keys){
-        return keys.stream()
-                // userList가 포함되지 않은 키만 필터링
-                .filter(key -> !key.contains("userList"))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public ChatRoomOutVo findChatRoomByRoomName(String roomName) {
-//        ChatRoomOutVo chatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomOutVo.class);
+        // TODO 성능 테스트 후 아래 코드 삭제 필요
+//        if (StringUtil.isNullOrEmpty(keyword)) {
+//            List<String> keys = filterKeys(redisUtils.getKeysByPattern("sessionId:"));
+//            for (String key : keys) {
+//                key = key.replace("\"", "");
+//                Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(key);
+//                if (allChatRoomData.isEmpty() || allChatRoomData.get(DataType.CHATROOM.getType()) == null) {
+//                    continue;
+//                }
+//                ChatRoomInVo chatRoom = (ChatRoomInVo) allChatRoomData.get(DataType.CHATROOM.getType());
+//                Integer currentUserCount = (Integer) allChatRoomData.get(DataType.USER_COUNT.getType());
+//                currentUserCount = currentUserCount == null ? 0 : currentUserCount;
+//                List userList = redisUtils.getRedisDataByDataType(key, DataType.USER_LIST, List.class);
 //
-//        if (Objects.isNull(chatRoom)) {
-//            throw new BadRequestException("Can not find ChatRoom");
+//                chatRoomList.add(ChatRoomOutVo.of(chatRoom, userList, currentUserCount));
+//            }
+//        } else {
+//            List<Document> roomListByKeyword = redisUtils.getRoomListByKeyword(keyword, pageNum);
+//            for (Document document : roomListByKeyword) {
+//                ChatRoomInVo chatRoom = JsonUtils.jsonToObj(document.getFields().get("chatroom").toString(), ChatRoomInVo.class);
+//                Integer currentUserCount = redisUtils.getUserCount(chatRoom.getSessionId());
+//                currentUserCount = currentUserCount == null ? 0 : currentUserCount;
+//                List userList = redisUtils.getRedisDataByDataType(chatRoom.getSessionId(), DataType.USER_LIST, List.class);
+//                chatRoomList.add(ChatRoomOutVo.of(chatRoom, userList, currentUserCount));
+//            }
 //        }
-//        Set<UserOutVo> userList = redisUtils.getRedisDataByDataType(sessionId, DataType.USER_LIST, Set.class);
-//        Integer currentUserCount = redisUtils.getRedisDataByDataType(sessionId, DataType.USER_COUNT, Integer.class);
-//
-//        chatRoom.setUserList(userList);
-//        chatRoom.setCurrentUserCount(currentUserCount);
-
-        return new ChatRoomOutVo();
-
+        return chatRoomList;
     }
 
     @Override
@@ -136,13 +135,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .orElseThrow(() -> new EntityNotFoundException("Can not find ChatRoom"));
         User joinUser = userRepository.findUserByIdx(userIdx)
                 .orElseThrow(() -> new EntityNotFoundException("Can not find user"));
-
-//        ChatRoomInVo chatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomInVo.class);
-//        int userCount = redisUtils.getUserCount(sessionId)+1;
-//
-//        if (chatRoomEntity.getMaxUserCount() < userCount) {
-//            throw new BadRequestException("Max User count");
-//        }
 
         Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(sessionId);
         if (allChatRoomData.isEmpty() || allChatRoomData.get(DataType.CHATROOM.getType()) == null) {
@@ -266,6 +258,5 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         if (authService.validateStrByType(ValidateType.CHATROOM_NAME, chatRoomInVo.getRoomName())) {
             throw new BadRequestException("already exist room");
         }
-
     }
 }
