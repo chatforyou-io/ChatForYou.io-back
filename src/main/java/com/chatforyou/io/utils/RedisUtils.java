@@ -306,7 +306,7 @@ public class RedisUtils {
                 return clazz.cast(slaveTemplate.opsForHash().get(redisKey, DataType.OPENVIDU.getType()));
             case USER_LIST:
                 String userListKey = redisKey + ":userList";
-                return clazz.cast(slaveTemplate.opsForSet().members(userListKey).stream().toList());
+                return clazz.cast(slaveTemplate.opsForSet().members(userListKey).stream().collect(Collectors.toSet()));
             default:
                 throw new BadRequestException("Dose Not Exist DataType");
         }
@@ -336,16 +336,12 @@ public class RedisUtils {
         putMap.put(DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA), cameraToken);
         putMap.put(DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN), screenToken);
         masterTemplate.opsForHash().putAll(redisKey, putMap);
-//        masterTemplate.opsForHash().put(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA), cameraToken);
-//        masterTemplate.opsForHash().put(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN), screenToken);
     }
 
     public void deleteConnectionTokens(String sessionId, String userId) {
         String redisKey = "sessionId:" + sessionId;
         // 유저별 토큰 정보 제거
         masterTemplate.opsForHash().delete(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA), DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN));
-//        masterTemplate.opsForHash().delete(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA));
-//        masterTemplate.opsForHash().delete(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN));
     }
 
     public Map<String, ConnectionOutVo> getConnectionTokens(String sessionId, String userId) {
@@ -353,9 +349,6 @@ public class RedisUtils {
         String redisKey = "sessionId:"+sessionId;
         Map<Object, Object> entries = slaveTemplate.opsForHash().entries(redisKey);
         Map<String, ConnectionOutVo> tokenMap = new HashMap<>();
-//        ConnectionOutVo cameraToken = (ConnectionOutVo) slaveTemplate.opsForHash().get(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA));
-//        ConnectionOutVo screenToken = (ConnectionOutVo) slaveTemplate.opsForHash().get(redisKey, DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN));
-
         tokenMap.put("cameraToken", (ConnectionOutVo) entries.get(DataType.redisDataTypeConnection(userId, DataType.CONNECTION_CAMERA)));
         tokenMap.put("screenToken", (ConnectionOutVo) entries.get(DataType.redisDataTypeConnection(userId, DataType.CONNECTION_SCREEN)));
 
@@ -390,14 +383,9 @@ public class RedisUtils {
 //        int pageSize = 5;    // 한 페이지에 표시할 항목 수
         String queryParam = "*";
         if (!StringUtil.isNullOrEmpty(keyword)) {
-            queryParam = "@creator:*"+keyword+"* | @roomName:*"+keyword+"*";
+            // or 조건이 제대로 동작하려면 조건과 조건을 () 로 구분해서 묶어야함
+            queryParam = "((@creator:*" + keyword + "*) | (@roomName:*" + keyword + "*))";
         }
-
-        // TODO 성능 테스트 후 삭제 필요
-//        List<Document> documents = chatRoomSearch.search(
-//                queryParam,
-//                new SearchOptions().page(pageNum * pageSize, pageSize).sort(new SortBy("currentTime", SortOrder.DESC))
-//        ).getDocuments();
 
         List<Document> documents = chatRoomSearch.search(
                 queryParam,

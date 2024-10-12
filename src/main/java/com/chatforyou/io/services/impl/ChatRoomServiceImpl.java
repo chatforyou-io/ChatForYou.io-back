@@ -17,7 +17,6 @@ import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.ChatRoomService;
 import com.chatforyou.io.services.OpenViduService;
-import com.chatforyou.io.utils.JsonUtils;
 import com.chatforyou.io.utils.RedisUtils;
 import com.chatforyou.io.utils.ThreadUtils;
 import io.github.dengliming.redismodule.redisearch.index.Document;
@@ -136,6 +135,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         User joinUser = userRepository.findUserByIdx(userIdx)
                 .orElseThrow(() -> new EntityNotFoundException("Can not find user"));
 
+        // redis 에서 chatroom 정보 확인
         Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(sessionId);
         if (allChatRoomData.isEmpty() || allChatRoomData.get(DataType.CHATROOM.getType()) == null) {
             throw new BadRequestException("Can not find ChatRoom");

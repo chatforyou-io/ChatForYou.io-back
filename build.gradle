@@ -69,9 +69,6 @@ dependencies {
 	// redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
-	// jedis
-	implementation group: 'redis.clients', name: 'jedis', version: '5.1.5'
-
 	// redisSearch
 	implementation group: 'io.github.dengliming.redismodule', name: 'redisearch', version: '2.0.3'
 

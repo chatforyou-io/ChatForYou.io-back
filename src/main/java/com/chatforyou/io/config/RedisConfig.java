@@ -152,7 +152,7 @@ public class RedisConfig {
         Config config = new Config();
         config.useMasterSlaveServers()
                 .setMasterAddress("redis://" + host + ":" + masterPort)
-                .addSlaveAddress("redis://"+host+":"+slavePort);
+                .addSlaveAddress("redis://" + host + ":" + slavePort);
 
         // RediSearchClient 생성
         redisSearchClient = new RediSearchClient(config);

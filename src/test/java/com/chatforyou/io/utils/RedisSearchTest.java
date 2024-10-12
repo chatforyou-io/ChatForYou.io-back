@@ -62,9 +62,11 @@ public class RedisSearchTest {
         int pageNumber = 0;  // 원하는 페이지 번호
         int pageSize = 5;    // 한 페이지에 표시할 항목 수
         String keyword = "한글";
+        String queryParam = "((@creator:*" + keyword + "*) | (@roomName:*" + keyword + "*))";
+
 
         List<Document> documents = chatRoomSearch.search(
-                "@creator:*"+keyword+"* | @roomName:*"+keyword+"*",
+                queryParam,
                 new SearchOptions().page(pageNumber * pageSize, pageSize)
         ).getDocuments();
 
@@ -80,7 +82,6 @@ public class RedisSearchTest {
         // Redis 검색 결과에서 openvidu 필드의 JSON 문자열 가져오기
         int pageNumber = 0;  // 원하는 페이지 번호
         int pageSize = 5;    // 한 페이지에 표시할 항목 수
-        String keyword = "한글";
 
         List<Document> documents = chatRoomSearch.search(
                 "*",
@@ -89,5 +90,33 @@ public class RedisSearchTest {
 
 
         logger.info("result :: {}", documents);
+    }
+
+    @Test
+    @DisplayName("레디스 특수문자 검색")
+    void searchSpecialChar() throws BadRequestException {
+        // 검색 실행
+        RediSearch chatRoomSearch = rediSearchClient.getRediSearch("chatRoomIndex");
+        // Redis 검색 결과에서 openvidu 필드의 JSON 문자열 가져오기
+        int pageNumber = 0;  // 원하는 페이지 번호
+        int pageSize = 5;    // 한 페이지에 표시할 항목 수
+        String keyword = "!zx";
+        String queryParam = "@roomName:*" + escapeSpecialCharacters(keyword) + "*";
+
+        List<Document> documents = chatRoomSearch.search(
+                queryParam,
+                new SearchOptions().page(pageNumber * pageSize, pageSize)
+        ).getDocuments();
+
+        logger.info("queryParam :: {}", queryParam);
+        logger.info("result :: {}", documents);
+    }
+
+    public String escapeSpecialCharacters(String keyword) {
+        // 특수문자를 정의 (이스케이프해야 할 문자들)
+        String specialCharacters = "[!@#?$%^&*()\\-+=<>|\\[\\]{}.,]";
+
+        // 정규 표현식을 사용하여 특수문자 앞에 '\'를 추가
+        return keyword.replaceAll(specialCharacters, "\\\\$0");
     }
 }
