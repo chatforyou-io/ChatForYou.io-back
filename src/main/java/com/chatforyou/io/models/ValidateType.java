@@ -2,10 +2,10 @@ package com.chatforyou.io.models;
 
 public enum ValidateType {
 
-    ID(01),
-    NICKNAME(02),
-    PASSWORD(03),
-    CHATROOM_NAME(04)
+    ID(1),
+    NICKNAME(2),
+    PASSWORD(3),
+    CHATROOM_NAME(4)
     ;
 
     private final int code;

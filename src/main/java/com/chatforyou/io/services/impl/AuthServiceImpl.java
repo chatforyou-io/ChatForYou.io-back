@@ -8,8 +8,11 @@ import com.chatforyou.io.repository.ChatRoomRepository;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.utils.AuthUtils;
+import com.chatforyou.io.utils.RedisUtils;
+import com.chatforyou.io.utils.ThreadUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +22,11 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
 	private final UserRepository userRepository;
-	private final ChatRoomRepository chatRoomRepository;
+	private final RedisUtils redisUtils;
 
 	private Map<String, AdminSessionData> adminSessions = new HashMap<>();
 
@@ -59,11 +63,20 @@ public class AuthServiceImpl implements AuthService {
 			throw new EntityNotFoundException("Invalid User Id or Password");
 		}
 
+		ThreadUtils.runTask(()->{
+			try {
+				redisUtils.saveLoginUser(UserOutVo.of(user, false));
+				return true;
+			} catch (Exception e) {
+				log.error("Unknown Exception :: {} : {}", e.getMessage(), e);
+				return false;
+			}
+		}, 10, 10, "Save Login User");
 		return UserOutVo.of(user, true);
 	}
 
 	@Override
-	public boolean validateStrByType(ValidateType type, String str) throws BadRequestException {
+	public boolean validateStrByType(ValidateType type, String str) {
 		switch (type) {
 			case ID:
 				return userRepository.checkExistsById(str);
@@ -72,8 +85,8 @@ public class AuthServiceImpl implements AuthService {
 			case PASSWORD:
 				// TODO passwd validate 체크 필요
 				break;
-			case CHATROOM_NAME:
-				return chatRoomRepository.checkExistsByRoomName(str);
+//			case CHATROOM_NAME:
+//				return chatRoomRepository.checkExistsByRoomName(str);
 		}
 
 		return false;

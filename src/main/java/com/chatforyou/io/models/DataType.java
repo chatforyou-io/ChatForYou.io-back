@@ -12,7 +12,8 @@ public enum DataType {
     CONNECTION_TOKENS("tokens", 5),
     USER_COUNT("user_count", 6),
     USER_LIST("user_list", 7),
-    FAVORITES("favorites", 8)
+    FAVORITES("favorites", 8),
+    LOGIN_USER("login_user", 9)
     ;
 
     private final int code;

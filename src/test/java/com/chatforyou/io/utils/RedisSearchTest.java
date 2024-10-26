@@ -2,6 +2,7 @@ package com.chatforyou.io.utils;
 
 import com.chatforyou.io.config.RedisConfig;
 import com.chatforyou.io.models.in.ChatRoomInVo;
+import com.chatforyou.io.models.out.UserOutVo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.dengliming.redismodule.redisearch.RediSearch;
 import io.github.dengliming.redismodule.redisearch.client.RediSearchClient;
@@ -112,11 +113,32 @@ public class RedisSearchTest {
         logger.info("result :: {}", documents);
     }
 
-    public String escapeSpecialCharacters(String keyword) {
+    private String escapeSpecialCharacters(String keyword) {
         // 특수문자를 정의 (이스케이프해야 할 문자들)
         String specialCharacters = "[!@#?$%^&*()\\-+=<>|\\[\\]{}.,]";
 
         // 정규 표현식을 사용하여 특수문자 앞에 '\'를 추가
         return keyword.replaceAll(specialCharacters, "\\\\$0");
+    }
+
+
+    @Test
+    @DisplayName("레디스 로그인 유저 검색")
+    void searchLoginUser() throws BadRequestException {
+        // 검색 실행
+        RediSearch chatRoomSearch = rediSearchClient.getRediSearch("userIndex");
+        // Redis 검색 결과에서 openvidu 필드의 JSON 문자열 가져오기
+        int pageNumber = 0;  // 원하는 페이지 번호
+        int pageSize = 5;    // 한 페이지에 표시할 항목 수
+        String keyword = "id";
+        String queryParam = "((@userId:*" + keyword + "*) | (@nickName:*" + keyword + "*))";
+
+        List<Document> documents = chatRoomSearch.search(
+                queryParam,
+                new SearchOptions().page(pageNumber * pageSize, pageSize)
+        ).getDocuments();
+
+        logger.info("queryParam :: {}", queryParam);
+        logger.info("result :: {}", documents);
     }
 }

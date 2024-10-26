@@ -157,19 +157,26 @@ public class RedisConfig {
         // RediSearchClient 생성
         redisSearchClient = new RediSearchClient(config);
 
-        // 인덱스 스키마 정의
-        Schema schema = new Schema()
+        // chatRoom 인덱스 스키마 정의
+        Schema chatRoomSchema = new Schema()
                 .addField(new TextField("sessionId"))
                 .addField(new TextField("creator").noStem())
                 .addField(new TextField("roomName").noStem())
                 .addField(new Field("currentTime", FieldType.NUMERIC));
 
+        // User 인덱스 스키마 정의
+        Schema userSchema = new Schema()
+                .addField(new TextField("userId").noStem())
+                .addField(new TextField("nickName").noStem());
+
+
         // 인덱스 생성 (존재하지 않을 경우에만 생성)
         try {
-            redisSearchClient.getRediSearch("chatRoomIndex").createIndex(schema);
-            log.info("인덱스가 성공적으로 생성되었습니다.");
+            redisSearchClient.getRediSearch("chatRoomIndex").createIndex(chatRoomSchema);
+//            redisSearchClient.getRediSearch("userIndex").createIndex(userSchema);
+            log.info("##### Successfully create Index #####");
         } catch (Exception e) {
-            log.error("인덱스가 이미 존재하거나 생성 중 오류가 발생했습니다.");
+            log.error("#### Fail to create Index, Maybe alreay Exist #####");
             log.error("Exception: {} :: {}", e.getMessage(), e);
 
         }

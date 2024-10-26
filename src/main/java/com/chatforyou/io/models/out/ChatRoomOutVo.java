@@ -2,13 +2,11 @@ package com.chatforyou.io.models.out;
 
 import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.models.in.ChatRoomInVo;
-import com.chatforyou.io.utils.RedisUtils;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Set;
 
 @Builder
 @Getter

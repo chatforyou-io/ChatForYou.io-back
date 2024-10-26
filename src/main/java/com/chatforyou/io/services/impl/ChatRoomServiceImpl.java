@@ -7,6 +7,7 @@ import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.DataType;
 import com.chatforyou.io.models.OpenViduDto;
+import com.chatforyou.io.models.SearchType;
 import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.models.in.ChatRoomInVo;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
@@ -82,7 +83,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     public List<ChatRoomOutVo> getChatRoomList(String keyword, int pageNum, int pageSize) throws BadRequestException {
         List<ChatRoomOutVo> chatRoomList = new ArrayList<>();
         pageNum = pageNum !=0 ? pageNum - 1 : pageNum;
-        List<Document> roomList = redisUtils.getRoomListByKeyword(keyword, pageNum, pageSize);
+        List<Document> roomList = redisUtils.searchByKeyword(SearchType.CHATROOM, keyword, pageNum, pageSize);
         for (Document document : roomList) {
             String sessionId = document.getFields().get("sessionId").toString().replace("\"", "");
             Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(sessionId);
@@ -96,32 +97,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
             chatRoomList.add(ChatRoomOutVo.of(chatRoom, userList, currentUserCount));
         }
-        // TODO 성능 테스트 후 아래 코드 삭제 필요
-//        if (StringUtil.isNullOrEmpty(keyword)) {
-//            List<String> keys = filterKeys(redisUtils.getKeysByPattern("sessionId:"));
-//            for (String key : keys) {
-//                key = key.replace("\"", "");
-//                Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(key);
-//                if (allChatRoomData.isEmpty() || allChatRoomData.get(DataType.CHATROOM.getType()) == null) {
-//                    continue;
-//                }
-//                ChatRoomInVo chatRoom = (ChatRoomInVo) allChatRoomData.get(DataType.CHATROOM.getType());
-//                Integer currentUserCount = (Integer) allChatRoomData.get(DataType.USER_COUNT.getType());
-//                currentUserCount = currentUserCount == null ? 0 : currentUserCount;
-//                List userList = redisUtils.getRedisDataByDataType(key, DataType.USER_LIST, List.class);
-//
-//                chatRoomList.add(ChatRoomOutVo.of(chatRoom, userList, currentUserCount));
-//            }
-//        } else {
-//            List<Document> roomListByKeyword = redisUtils.getRoomListByKeyword(keyword, pageNum);
-//            for (Document document : roomListByKeyword) {
-//                ChatRoomInVo chatRoom = JsonUtils.jsonToObj(document.getFields().get("chatroom").toString(), ChatRoomInVo.class);
-//                Integer currentUserCount = redisUtils.getUserCount(chatRoom.getSessionId());
-//                currentUserCount = currentUserCount == null ? 0 : currentUserCount;
-//                List userList = redisUtils.getRedisDataByDataType(chatRoom.getSessionId(), DataType.USER_LIST, List.class);
-//                chatRoomList.add(ChatRoomOutVo.of(chatRoom, userList, currentUserCount));
-//            }
-//        }
         return chatRoomList;
     }
 
@@ -241,7 +216,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             log.info("===== Already Deleted ChatRoom ====");
         }
 
-        ThreadUtils.runTask(() -> redisUtils.deleteKeysByKey(sessionId), 10, 100, "Delete sessionInfo ");
+        ThreadUtils.runTask(() -> redisUtils.deleteKeysByStr(sessionId), 10, 100, "Delete sessionInfo ");
         ThreadUtils.runTask(() -> openViduService.closeSession(sessionId), 10, 100, "Delete openvidu data ");
         return true;
     }
