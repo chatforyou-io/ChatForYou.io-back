@@ -2,6 +2,7 @@ package com.chatforyou.io.controller;
 
 import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.models.in.UserInVo;
+import com.chatforyou.io.models.in.UserUpdateVo;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.services.AuthService;
@@ -62,10 +63,18 @@ public class UserController {
 
 
     @PatchMapping("/update")
-    public ResponseEntity<Map<String, Object>> updateUser(@RequestBody UserInVo user) throws BadRequestException {
+    public ResponseEntity<Map<String, Object>> updateUser(@RequestBody UserUpdateVo userVo) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
-        response.put("userData", userService.updateUser(user));
+        response.put("userData", userService.updateUser(userVo));
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PatchMapping("/update/pwd")
+    public ResponseEntity<Map<String, Object>> updateUserPasswd(@RequestBody UserUpdateVo userVo) throws BadRequestException {
+        Map<String, Object> response = new HashMap<>();
+        response.put("result", "success");
+        response.put("userData", userService.updateUserPwd(userVo));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

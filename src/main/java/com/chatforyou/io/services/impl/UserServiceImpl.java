@@ -1,15 +1,19 @@
 package com.chatforyou.io.services.impl;
 
+import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.SearchType;
 import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.models.in.UserInVo;
+import com.chatforyou.io.models.in.UserUpdateVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.UserService;
+import com.chatforyou.io.utils.AuthUtils;
 import com.chatforyou.io.utils.JsonUtils;
 import com.chatforyou.io.utils.RedisUtils;
+import com.google.gson.JsonObject;
 import io.github.dengliming.redismodule.redisearch.index.Document;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -58,14 +62,46 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserOutVo updateUser(UserInVo userInVO) throws BadRequestException {
-        if (!userInVO.getPwd().equals(userInVO.getConfirmPwd())) {
-            throw new BadRequestException("can not confirm user Password");
-        }
-        User user = userRepository.findUserById(userInVO.getId())
+    public UserOutVo updateUser(UserUpdateVo userUpdateVo) throws BadRequestException {
+        User user = userRepository.findUserByIdx(userUpdateVo.getIdx())
                 .orElseThrow(()->new EntityNotFoundException("can not find user"));
 
-        User updatedUser = User.ofUpdate(userInVO, user);
+        if (StringUtil.isNullOrEmpty(userUpdateVo.getPwd())) {
+            throw new BadRequestException("Password is a required field.");
+        }
+
+        if (!AuthUtils.getDecodeStr(user.getPwd().getBytes()).equals(AuthUtils.getDecodeStr(userUpdateVo.getPwd().getBytes()))) {
+            throw new EntityNotFoundException("Invalid User Id or Password");
+        }
+
+        User updatedUser = User.ofUpdate(userUpdateVo, user);
+        return UserOutVo.of(userRepository.saveAndFlush(updatedUser), false);
+    }
+
+    @Override
+    public UserOutVo updateUserPwd(UserUpdateVo userUpdateVo) throws BadRequestException {
+
+        User user = userRepository.findUserByIdx(userUpdateVo.getIdx())
+                .orElseThrow(()->new EntityNotFoundException("can not find user"));
+
+        if (StringUtil.isNullOrEmpty(userUpdateVo.getPwd()) || StringUtil.isNullOrEmpty(userUpdateVo.getNewPwd())) {
+            throw new BadRequestException("Password and new password are required fields.");
+        }
+
+        if (!AuthUtils.getDecodeStr(user.getPwd().getBytes()).equals(AuthUtils.getDecodeStr(userUpdateVo.getPwd().getBytes()))) {
+            throw new EntityNotFoundException("Invalid User Id or Password");
+        }
+
+        User updatedUser = User.builder()
+                .idx(user.getIdx())
+                .id(user.getId())
+                .name(user.getName())
+                .pwd(userUpdateVo.getNewPwd())
+                .usePwd(user.getUsePwd())
+                .nickName(user.getNickName())
+                .createDate(user.getCreateDate())
+                .build();
+
         return UserOutVo.of(userRepository.saveAndFlush(updatedUser), false);
     }
 

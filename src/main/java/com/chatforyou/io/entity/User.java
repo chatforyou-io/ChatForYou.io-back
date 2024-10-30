@@ -1,6 +1,8 @@
 package com.chatforyou.io.entity;
 
+import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.models.in.UserInVo;
+import com.chatforyou.io.models.in.UserUpdateVo;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -59,14 +61,14 @@ public class User {
                 .build();
     }
 
-    public static User ofUpdate(UserInVo userInVO, User user){
+    public static User ofUpdate(UserUpdateVo userUpdateVo, User user){
         return User.builder()
                 .idx(user.getIdx())
                 .id(user.getId())
-                .pwd(userInVO.getPwd())
+                .pwd(user.getPwd())
                 .usePwd(user.getUsePwd())
                 .name(user.getName())
-                .nickName(userInVO.getNickName())
+                .nickName(StringUtil.isNullOrEmpty(userUpdateVo.getNickName()) ? user.getNickName() : userUpdateVo.getNickName())
                 .createDate(user.getCreateDate())
                 .build();
     }
