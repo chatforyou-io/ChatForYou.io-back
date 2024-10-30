@@ -66,14 +66,6 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findUserByIdx(userUpdateVo.getIdx())
                 .orElseThrow(()->new EntityNotFoundException("can not find user"));
 
-        if (StringUtil.isNullOrEmpty(userUpdateVo.getPwd())) {
-            throw new BadRequestException("Password is a required field.");
-        }
-
-        if (!AuthUtils.getDecodeStr(user.getPwd().getBytes()).equals(AuthUtils.getDecodeStr(userUpdateVo.getPwd().getBytes()))) {
-            throw new EntityNotFoundException("Invalid User Id or Password");
-        }
-
         User updatedUser = User.ofUpdate(userUpdateVo, user);
         return UserOutVo.of(userRepository.saveAndFlush(updatedUser), false);
     }
@@ -83,14 +75,6 @@ public class UserServiceImpl implements UserService {
 
         User user = userRepository.findUserByIdx(userUpdateVo.getIdx())
                 .orElseThrow(()->new EntityNotFoundException("can not find user"));
-
-        if (StringUtil.isNullOrEmpty(userUpdateVo.getPwd()) || StringUtil.isNullOrEmpty(userUpdateVo.getNewPwd())) {
-            throw new BadRequestException("Password and new password are required fields.");
-        }
-
-        if (!AuthUtils.getDecodeStr(user.getPwd().getBytes()).equals(AuthUtils.getDecodeStr(userUpdateVo.getPwd().getBytes()))) {
-            throw new EntityNotFoundException("Invalid User Id or Password");
-        }
 
         User updatedUser = User.builder()
                 .idx(user.getIdx())

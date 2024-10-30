@@ -10,8 +10,6 @@ public class UserUpdateVo {
     @NonNull
     private Long idx;
     private String id;
-    @NonNull
-    private String pwd;
     private String newPwd;
     private String nickName;
 }
