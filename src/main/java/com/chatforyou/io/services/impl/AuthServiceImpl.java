@@ -3,6 +3,7 @@ package com.chatforyou.io.services.impl;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.AdminSessionData;
 import com.chatforyou.io.models.ValidateType;
+import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.repository.ChatRoomRepository;
 import com.chatforyou.io.repository.UserRepository;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -68,11 +70,29 @@ public class AuthServiceImpl implements AuthService {
 				redisUtils.saveLoginUser(UserOutVo.of(user, false));
 				return true;
 			} catch (Exception e) {
-				log.error("Unknown Exception :: {} : {}", e.getMessage(), e);
+
 				return false;
 			}
-		}, 10, 10, "Save Login User");
+		}, 10, 10, "Save Login User Info");
 		return UserOutVo.of(user, true);
+	}
+
+	@Override
+	public void logoutUser(UserInVo user) {
+		if (userRepository.findUserByIdx(user.getIdx()).isEmpty()) {
+			throw new EntityNotFoundException("Can not find user info");
+		}
+
+		ThreadUtils.runTask(()->{
+			try {
+				redisUtils.deleteLoginUser(user);
+				return true;
+			} catch (Exception e) {
+				log.error("=== Error User :: {}", user.toString());
+				log.error("=== Unknown Exception :: {} : {}", e.getMessage(), e);
+				return false;
+			}
+		}, 10, 10, "Delete Login User Info");
 	}
 
 	@Override

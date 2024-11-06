@@ -76,6 +76,14 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findUserByIdx(userUpdateVo.getIdx())
                 .orElseThrow(()->new EntityNotFoundException("can not find user"));
 
+        if (user.getPwd().equals(userUpdateVo.getNewPwd())) {
+            throw new BadRequestException("New password cannot be the same as the old password.");
+        }
+
+        if (userUpdateVo.getNewPwd() == null) {
+            throw new BadRequestException("New Password is Required");
+        }
+
         User updatedUser = User.builder()
                 .idx(user.getIdx())
                 .id(user.getId())
