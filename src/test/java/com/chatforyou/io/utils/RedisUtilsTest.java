@@ -60,4 +60,14 @@ class RedisUtilsTest {
 
         logger.info("result :: {}", documents);
     }
+
+    @Test
+    @DisplayName("로그인 된 유저의 refresh token 검색")
+    void findRefreshToken() throws BadRequestException {
+        Set<String> strSet = redisUtils.getKeysByPattern("user");
+        for(String key : strSet){
+            String token = redisUtils.getRedisDataByDataType(key, DataType.USER_REFRESH_TOKEN, String.class);
+            logger.info("token :: {}", token);
+        }
+    }
 }

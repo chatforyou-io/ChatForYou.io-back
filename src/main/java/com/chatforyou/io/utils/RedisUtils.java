@@ -5,6 +5,7 @@ import com.chatforyou.io.models.DataType;
 import com.chatforyou.io.models.OpenViduDto;
 import com.chatforyou.io.models.SearchType;
 import com.chatforyou.io.models.in.ChatRoomInVo;
+import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -306,7 +307,7 @@ public class RedisUtils {
     public <T> T getRedisDataByDataType(String key, DataType dataType, Class<T> clazz) throws BadRequestException {
         String redisKey = "";
         // TODO 로그인한 유저를 조회하기 위한 코드
-        if (dataType.equals(DataType.LOGIN_USER)) {
+        if (DataType.LOGIN_USER.equals(dataType) || DataType.USER_REFRESH_TOKEN.equals(dataType)) {
             redisKey = key.contains("user:") ? key : "user:" + key;
         } else {
             redisKey = makeRedisKey(key);
@@ -321,6 +322,8 @@ public class RedisUtils {
                 return clazz.cast(slaveTemplate.opsForSet().members(userListKey).stream().collect(Collectors.toList()));
             case LOGIN_USER:
                 return clazz.cast(slaveTemplate.opsForHash().get(redisKey, DataType.LOGIN_USER.getType()));
+            case USER_REFRESH_TOKEN:
+                return clazz.cast(slaveTemplate.opsForHash().get(redisKey, DataType.USER_REFRESH_TOKEN.getType()));
             default:
                 throw new BadRequestException("Dose Not Exist DataType");
         }
@@ -441,8 +444,16 @@ public class RedisUtils {
         masterTemplate.opsForHash().put(redisKey, "nickName", user.getNickName());
     }
 
-    public void delLoginUser() {
-        // TODO 삭제는 어떻게...?
+    public void saveRefreshToken(Long userIdx, String refreshToken) {
+        // redisKey = user:userIdx
+        String redisKey = "user:" + userIdx;
+        // index = userId && nickName
+        masterTemplate.opsForHash().put(redisKey, DataType.USER_REFRESH_TOKEN.getType(), refreshToken);
+    }
+
+    public void deleteLoginUser(UserInVo user) {
+        String redisKey = "user:" + user.getIdx();
+        masterTemplate.delete(redisKey);
     }
 
 }

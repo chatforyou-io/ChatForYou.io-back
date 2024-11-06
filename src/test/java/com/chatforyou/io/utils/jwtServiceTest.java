@@ -7,6 +7,7 @@ import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.services.JwtService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import org.apache.coyote.BadRequestException;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -73,11 +74,12 @@ class jwtServiceTest {
 
     @DisplayName("토큰 검증 :: 만료 X secretKey 일치")
     @Test
-    public void verifyTokenEqualSecretKey() throws ExceptionController.JwtExpiredException, ExceptionController.JwtBearerException, ExceptionController.JwtSignatureException {
+    public void verifyTokenEqualSecretKey() throws BadRequestException {
         JwtPayload payload = createPayload();
+        UserOutVo userVo = createUserVo();
         String accessToken = jwtService.createAccessToken(payload);
 
-        JwtPayload resultPayload = jwtService.verifyAccessToken("Bearer "+accessToken);
+        JwtPayload resultPayload = jwtService.verifyAccessToken(userVo.getIdx(), "Bearer "+accessToken);
         logger.info("result ::: {}", resultPayload.toString());
     }
 
@@ -85,6 +87,8 @@ class jwtServiceTest {
     @Test
     public void verifyTokenUnequalSecretKey(){
         JwtPayload payload = createPayload();
+        UserOutVo userVo = createUserVo();
+
 
         String someJwt = Jwts.builder()
                 .subject(payload.getUserId())
@@ -96,7 +100,7 @@ class jwtServiceTest {
                 .signWith(Jwts.SIG.HS256.key().build()) // secret 불일치
                 .compact();
 
-        Assertions.assertThatThrownBy(() -> jwtService.verifyAccessToken("Bearer "+someJwt))
+        Assertions.assertThatThrownBy(() -> jwtService.verifyAccessToken(userVo.getIdx(), "Bearer "+someJwt))
                 .isInstanceOf(SignatureException.class);
     }
 
@@ -104,9 +108,10 @@ class jwtServiceTest {
     @Test
     public void verifyTokenExpiredToken() throws ExceptionController.JwtExpiredException, ExceptionController.JwtBearerException, ExceptionController.JwtSignatureException {
         JwtPayload payload = createPayload();
+        UserOutVo userVo = createUserVo();
         String expiredToken = jwtService.createAccessToken(payload);
 
-        Assertions.assertThatThrownBy(() -> jwtService.verifyAccessToken("Bearer "+expiredToken))
+        Assertions.assertThatThrownBy(() -> jwtService.verifyAccessToken(userVo.getIdx(), "Bearer "+expiredToken))
                 .isInstanceOf(ExpiredJwtException.class);
     }
 }
