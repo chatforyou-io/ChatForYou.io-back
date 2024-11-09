@@ -1,11 +1,13 @@
 package com.chatforyou.io.services.impl;
 
+import com.chatforyou.io.entity.SocialUser;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.AdminSessionData;
 import com.chatforyou.io.models.ValidateType;
+import com.chatforyou.io.models.in.SocialUserInVo;
 import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.out.UserOutVo;
-import com.chatforyou.io.repository.ChatRoomRepository;
+import com.chatforyou.io.repository.SocialRepository;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.utils.AuthUtils;
@@ -14,13 +16,12 @@ import com.chatforyou.io.utils.ThreadUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AuthServiceImpl implements AuthService {
 
 	private final UserRepository userRepository;
+	private final SocialRepository socialRepository;
 	private final RedisUtils redisUtils;
 
 	private Map<String, AdminSessionData> adminSessions = new HashMap<>();
@@ -75,6 +77,25 @@ public class AuthServiceImpl implements AuthService {
 			}
 		}, 10, 10, "Save Login User Info");
 		return UserOutVo.of(user, false);
+	}
+
+	@Override
+	public UserOutVo getSocialLoginUserInfo(SocialUserInVo socialUserInVo) {
+		Optional<SocialUser> socialUser = socialRepository.findSocialByProviderAndAccountId(socialUserInVo.getProviderAccountId(), socialUserInVo.getProvider());
+		User user = null;
+		if (socialUser.isPresent()) { // 소셜 로그인 유저 정보가 있다면
+			// user 와 join 해서 가져오기
+			return UserOutVo.of(socialUser.get().getUser(), false);
+		} else { // 소셜 로그인 유저 정보가 없다면
+			// user 에 insert
+			user = User.ofSocialUser(socialUserInVo);
+			userRepository.saveAndFlush(user);
+
+			// social 에 insert
+			SocialUser socialUserEntity = SocialUser.ofUser(user, socialUserInVo);
+			socialRepository.saveAndFlush(socialUserEntity);
+			return UserOutVo.of(user, false);
+		}
 	}
 
 	@Override

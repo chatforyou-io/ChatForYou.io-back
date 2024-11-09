@@ -2,7 +2,7 @@ package com.chatforyou.io.models.out;
 
 import com.chatforyou.io.entity.Board;
 import com.chatforyou.io.entity.ChatRoom;
-import com.chatforyou.io.entity.Social;
+import com.chatforyou.io.entity.SocialUser;
 import com.chatforyou.io.entity.User;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
@@ -31,12 +31,12 @@ public class UserOutVo implements Serializable {
 
     private List<User> friendList;
 
-    // TODO 아래 3가지는 모두 output 모델로 변경할 것
-    private Set<Board> boards;
-
-    private Set<ChatRoom> chatRooms;
-
-    private List<Social> socials;
+//    TODO 아래 기능들에 대해 논의 필요. 사용안하면 삭제 필요.
+//    private Set<Board> boards;
+//
+//    private Set<ChatRoom> chatRooms;
+//
+//    private List<SocialUser> socialUsers;
 
     public static UserOutVo of(User user, boolean includePwd) {
         return UserOutVo.builder()
@@ -48,27 +48,27 @@ public class UserOutVo implements Serializable {
                 .build();
     }
 
-    public Set<Board> getBoards(User user) {
-        // TODO 서비스 로직 이용
-        if (this.boards == null) {
-            this.boards = user.getBoards();
-        }
-        return this.boards;
-    }
+//    public Set<Board> getBoards(User user) {
+//        // TODO 서비스 로직 이용
+//        if (this.boards == null) {
+//            this.boards = user.getBoards();
+//        }
+//        return this.boards;
+//    }
 
-    public Set<ChatRoom> getChatRooms(User user) {
-        // TODO 서비스 로직 이용
-        if (this.chatRooms == null) {
-            this.chatRooms = user.getChatRooms();
-        }
-        return this.chatRooms;
-    }
+//    public Set<ChatRoom> getChatRooms(User user) {
+//        // TODO 서비스 로직 이용
+//        if (this.chatRooms == null) {
+//            this.chatRooms = user.getChatRooms();
+//        }
+//        return this.chatRooms;
+//    }
 
-    public List<Social> getSocials(User user) {
-        // TODO 서비스 로직 이용
-        if (this.socials == null) {
-            this.socials = user.getSocials();
-        }
-        return this.socials;
-    }
+//    public List<SocialUser> getSocialUsers(User user) {
+//        // TODO 서비스 로직 이용
+//        if (this.socialUsers == null) {
+//            this.socialUsers = user.getSocialUsers();
+//        }
+//        return this.socialUsers;
+//    }
 }

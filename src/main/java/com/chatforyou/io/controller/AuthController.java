@@ -7,6 +7,7 @@ import com.chatforyou.io.config.SecurityConfig;
 import com.chatforyou.io.models.AdminSessionData;
 import com.chatforyou.io.models.JwtPayload;
 import com.chatforyou.io.models.ValidateType;
+import com.chatforyou.io.models.in.SocialUserInVo;
 import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.services.*;
@@ -68,6 +69,21 @@ public class AuthController {
 		// 요청으로부터 사용자명과 비밀번호를 가져옴
 		Map<String, Object> result = new ConcurrentHashMap<>();
 		UserOutVo loginUserInfo = authService.getLoginUserInfo(user.getId(), user.getPwd());
+		result.put("result", "success");
+		result.put("userData", loginUserInfo);
+
+		response.addHeader("AccessToken", jwtService.createAccessToken(JwtPayload.of(loginUserInfo)));
+		response.addHeader("RefreshToken", jwtService.createRefreshToken(JwtPayload.of(loginUserInfo)));
+
+		return new ResponseEntity<>(result, HttpStatus.OK);
+	}
+
+	@PostMapping("/login/social")
+	public ResponseEntity<?> socialLogin(@RequestBody SocialUserInVo socialUser, HttpServletResponse response) {
+
+		// 요청으로부터 사용자명과 비밀번호를 가져옴
+		Map<String, Object> result = new ConcurrentHashMap<>();
+		UserOutVo loginUserInfo = authService.getSocialLoginUserInfo(socialUser);
 		result.put("result", "success");
 		result.put("userData", loginUserInfo);
 

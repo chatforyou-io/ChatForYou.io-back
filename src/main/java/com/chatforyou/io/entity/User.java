@@ -1,14 +1,13 @@
 package com.chatforyou.io.entity;
 
 import ch.qos.logback.core.util.StringUtil;
+import com.chatforyou.io.models.in.SocialUserInVo;
 import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.in.UserUpdateVo;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Getter
 @Builder
@@ -40,14 +39,15 @@ public class User {
     @Column(name = "CREATE_DATE", nullable = false)
     private Long createDate;
 
-    @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
-    private Set<Board> boards;
+//    TODO 아래 기능들에 대해 논의 필요. 사용안하면 삭제 필요.
+//    @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
+//    private Set<Board> boards;
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    private Set<ChatRoom> chatRooms;
-
-    @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
-    private List<Social> socials;
+//    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+//    private Set<ChatRoom> chatRooms;
+//
+//    @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
+//    private List<SocialUser> socialUsers;
 
     public static User ofSave(UserInVo userInVO){
         return User.builder()
@@ -70,6 +70,17 @@ public class User {
                 .name(user.getName())
                 .nickName(StringUtil.isNullOrEmpty(userUpdateVo.getNickName()) ? user.getNickName() : userUpdateVo.getNickName())
                 .createDate(user.getCreateDate())
+                .build();
+    }
+
+    public static User ofSocialUser(SocialUserInVo socialUser){
+        return User.builder()
+                .id(socialUser.getProviderAccountId())
+                .pwd(Base64.getEncoder().encode(UUID.randomUUID().toString().getBytes()).toString())
+                .usePwd(false)
+                .name(socialUser.getName())
+                .nickName(socialUser.getNickName())
+                .createDate(new Date().getTime())
                 .build();
     }
 }
