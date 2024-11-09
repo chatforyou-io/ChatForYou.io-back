@@ -74,7 +74,7 @@ public class AuthServiceImpl implements AuthService {
 				return false;
 			}
 		}, 10, 10, "Save Login User Info");
-		return UserOutVo.of(user, true);
+		return UserOutVo.of(user, false);
 	}
 
 	@Override

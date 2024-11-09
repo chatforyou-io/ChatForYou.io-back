@@ -66,7 +66,7 @@ class jwtServiceTest {
     public void createToken(){
         JwtPayload payload = createPayload();
         String accessToken = jwtService.createAccessToken(payload);
-        String refreshToken = jwtService.createRefreshToken(createUserVo().getIdx(), payload);
+        String refreshToken = jwtService.createRefreshToken(payload);
 
         logger.info("accessToken ::: {}", accessToken);
         logger.info("refreshToken ::: {}", refreshToken);

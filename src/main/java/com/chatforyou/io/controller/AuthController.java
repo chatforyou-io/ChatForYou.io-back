@@ -52,7 +52,6 @@ public class AuthController {
 	private String CALL_OPENVIDU_CERTTYPE;
 
 	private final MailService mailService;
-	private final UserService userService;
 	private final OpenViduService openviduService;
 	private final AuthService authService;
 	private final JwtService jwtService;
@@ -72,8 +71,8 @@ public class AuthController {
 		result.put("result", "success");
 		result.put("userData", loginUserInfo);
 
-		response.addHeader("accessToken", jwtService.createAccessToken(JwtPayload.of(loginUserInfo)));
-		response.addHeader("refreshToken", jwtService.createRefreshToken(loginUserInfo.getIdx(), JwtPayload.of(loginUserInfo)));
+		response.addHeader("AccessToken", jwtService.createAccessToken(JwtPayload.of(loginUserInfo)));
+		response.addHeader("RefreshToken", jwtService.createRefreshToken(JwtPayload.of(loginUserInfo)));
 
 		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
@@ -94,11 +93,9 @@ public class AuthController {
 			@RequestHeader("Authorization") String bearerToken,
 			@RequestBody UserInVo user, HttpServletRequest request, HttpServletResponse response) throws BadRequestException {
 
-		jwtService.verifyRefreshToken(user.getIdx(), bearerToken);
-
 		Map<String, String> tokenResult = jwtService.reissueToken(user.getIdx(), bearerToken);
-		response.addHeader("accessToken", tokenResult.get("accessToken"));
-		response.addHeader("refreshToken", tokenResult.get("refreshToken"));
+		response.addHeader("AccessToken", tokenResult.get("accessToken"));
+		response.addHeader("RefreshToken", tokenResult.get("refreshToken"));
 
 		Map<String, Object> result = new ConcurrentHashMap<>();
 		result.put("result", "success");

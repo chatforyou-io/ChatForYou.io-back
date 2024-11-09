@@ -66,10 +66,11 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public String createRefreshToken(Long userIdx, JwtPayload jwtPayload) {
+    public String createRefreshToken(JwtPayload jwtPayload) {
+        Long userIdx = jwtPayload.getIdx();
         String refreshToken = Jwts.builder()
                 .subject(REFRESH_TOKEN)
-                .claim("idx", jwtPayload.getIdx())
+                .claim("idx", userIdx)
 //                .claim("userId", jwtPayload.getUserId())
 //                .claim("isAdmin", jwtPayload.isAdmin())
 //                .claim("issuedAt", jwtPayload.getCreateDate())
@@ -111,7 +112,7 @@ public class JwtServiceImpl implements JwtService {
             }
 
             return JwtPayload.builder()
-                    .userId(claims.getSubject())
+                    .userId(claims.get("userId", String.class))
                     .idx(claims.get("idx", Long.class))
 //                    .isAdmin(claims.get("isAdmin", Boolean.class))
                     .createDate(claims.get("issuedAt", Long.class))
@@ -128,6 +129,10 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public JwtPayload verifyRefreshToken(Long userIdx, String jwtToken) throws BadRequestException {
         String tokenInRedis = redisUtils.getRedisDataByDataType(String.valueOf(userIdx), DataType.USER_REFRESH_TOKEN, String.class);
+        if (tokenInRedis == null) {
+            throw new ExceptionController.UnauthorizedException("Refresh token not found for the logged-in user");
+        }
+
         String token = this.subStrBearerToken(jwtToken);
         if (StringUtil.isNullOrEmpty(token) || !tokenInRedis.equals(token)) {
             throw new ExceptionController.UnauthorizedException("Refresh Token validation failed");
@@ -137,7 +142,7 @@ public class JwtServiceImpl implements JwtService {
             Jws<Claims> claimsJws = Jwts.parser()
                     .setSigningKey(secretKey)
                     .requireIssuer(issuer)
-                    .requireSubject(ACCESS_TOKEN)
+                    .requireSubject(REFRESH_TOKEN)
                     .build()
                     .parseClaimsJws(token);
 
@@ -147,17 +152,10 @@ public class JwtServiceImpl implements JwtService {
                 throw new BadRequestException("Does not match User Info :: USER_IDX");
             }
 
-            if (userRepository.findUserByIdx(userIdx).isEmpty()) {
-                // 유저 정보를 찾을 수 없는 경우
-                throw new EntityNotFoundException("Can not find user info");
-            }
+            User user = userRepository.findUserByIdx(userIdx)
+                    .orElseThrow(() -> new EntityNotFoundException("can not find user"));
 
-            return JwtPayload.builder()
-                    .userId(claims.getSubject())
-                    .idx(userIdx)
-//                    .isAdmin(claims.get("isAdmin", Boolean.class))
-                    .createDate(claims.get("issuedAt", Long.class))
-                    .build();
+            return JwtPayload.of(user);
         }catch (SignatureException e) {
             // 비밀 키 검증 실패 시 처리
             throw new ExceptionController.JwtSignatureException("The provided token signature is invalid.", e);
@@ -170,9 +168,9 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public Map<String, String> reissueToken(Long userIdx, String refreshToken) throws BadRequestException {
         Map<String, String> result = new ConcurrentHashMap<>();
-        JwtPayload payload = this.verifyAccessToken(userIdx, this.subStrBearerToken(refreshToken));
+        JwtPayload payload = this.verifyRefreshToken(userIdx, refreshToken);
         result.put("accessToken", this.createAccessToken(payload));
-        result.put("refreshToken", this.createRefreshToken(userIdx, payload));
+        result.put("refreshToken", this.createRefreshToken(payload));
         return result;
     }
 
