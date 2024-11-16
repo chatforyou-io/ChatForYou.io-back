@@ -15,7 +15,7 @@ public interface AuthService {
     void delAdminSession(String sessionId);
     boolean checkEmailValidate(String token, String code);
     UserOutVo getLoginUserInfo(String id, String pwd);
-    UserOutVo getSocialLoginUserInfo(SocialUserInVo socialUser);
+    UserOutVo getSocialLoginUserInfo(SocialUserInVo socialUser) throws BadRequestException;
     void logoutUser(UserInVo user);
     boolean validateStrByType(ValidateType type, String str)  throws BadRequestException;
 }

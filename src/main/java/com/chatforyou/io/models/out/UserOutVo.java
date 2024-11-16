@@ -28,7 +28,7 @@ public class UserOutVo implements Serializable {
     private String name;
 
     private String nickName;
-
+    private String provider;
     private List<User> friendList;
 
 //    TODO 아래 기능들에 대해 논의 필요. 사용안하면 삭제 필요.
@@ -45,6 +45,19 @@ public class UserOutVo implements Serializable {
                 .pwd(includePwd ? user.getPwd() : null)
                 .name(user.getName())
                 .nickName(user.getNickName())
+                .provider("")
+                .build();
+    }
+
+    public static UserOutVo of(SocialUser socialUser, boolean includePwd) {
+        User user = socialUser.getUser();
+        return UserOutVo.builder()
+                .idx(user.getIdx())
+                .id(user.getId())
+                .pwd(includePwd ? user.getPwd() : null)
+                .name(user.getName())
+                .nickName(user.getNickName())
+                .provider(socialUser.getProvider())
                 .build();
     }
 

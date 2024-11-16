@@ -79,7 +79,7 @@ public class AuthController {
 	}
 
 	@PostMapping("/login/social")
-	public ResponseEntity<?> socialLogin(@RequestBody SocialUserInVo socialUser, HttpServletResponse response) {
+	public ResponseEntity<?> socialLogin(@RequestBody SocialUserInVo socialUser, HttpServletResponse response) throws BadRequestException {
 
 		// 요청으로부터 사용자명과 비밀번호를 가져옴
 		Map<String, Object> result = new ConcurrentHashMap<>();
