@@ -85,6 +85,9 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         pageNum = pageNum !=0 ? pageNum - 1 : pageNum;
         List<Document> roomList = redisUtils.searchByKeyword(SearchType.CHATROOM, keyword, pageNum, pageSize);
         for (Document document : roomList) {
+            if (document.getFields().get("sessionId") == null) {
+                continue;
+            }
             String sessionId = document.getFields().get("sessionId").toString().replace("\"", "");
             Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(sessionId);
             if (allChatRoomData.isEmpty() || allChatRoomData.get(DataType.CHATROOM.getType()) == null) {
