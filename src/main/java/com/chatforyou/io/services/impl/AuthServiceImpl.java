@@ -1,10 +1,13 @@
 package com.chatforyou.io.services.impl;
 
+import com.chatforyou.io.entity.SocialUser;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.AdminSessionData;
 import com.chatforyou.io.models.ValidateType;
+import com.chatforyou.io.models.in.SocialUserInVo;
+import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.out.UserOutVo;
-import com.chatforyou.io.repository.ChatRoomRepository;
+import com.chatforyou.io.repository.SocialRepository;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.utils.AuthUtils;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +30,7 @@ import java.util.Map;
 public class AuthServiceImpl implements AuthService {
 
 	private final UserRepository userRepository;
+	private final SocialRepository socialRepository;
 	private final RedisUtils redisUtils;
 
 	private Map<String, AdminSessionData> adminSessions = new HashMap<>();
@@ -63,16 +68,61 @@ public class AuthServiceImpl implements AuthService {
 			throw new EntityNotFoundException("Invalid User Id or Password");
 		}
 
+		UserOutVo userOutVo = UserOutVo.of(user, false);
+
+		userRedisJob(userOutVo);
+
+		return userOutVo;
+	}
+
+	@Override
+	public UserOutVo getSocialLoginUserInfo(SocialUserInVo socialUserInVo) throws BadRequestException {
+		if (socialUserInVo.getProvider() == null || socialUserInVo.getProviderAccountId() == null) {
+			throw new BadRequestException("Need Provider or providerAccountId");
+		}
+		Optional<SocialUser> socialUser = socialRepository.findSocialUserByProviderAccountIdAndAndProvider(socialUserInVo.getProviderAccountId(), socialUserInVo.getProvider());
+		User user = null;
+		if (socialUser.isPresent()) { // 소셜 로그인 유저 정보가 있다면
+			UserOutVo userOutVo = UserOutVo.of(socialUser.get(), false);
+
+			// 유저 레디스 저장
+			userRedisJob(userOutVo);
+
+			return userOutVo;
+		} else { // 소셜 로그인 유저 정보가 없다면
+			// user 에 insert
+			user = User.ofSocialUser(socialUserInVo);
+			userRepository.saveAndFlush(user);
+
+			// social 에 insert
+			SocialUser socialUserEntity = SocialUser.ofUser(user, socialUserInVo);
+			socialRepository.saveAndFlush(socialUserEntity);
+
+			UserOutVo userOutVo = UserOutVo.of(socialUserEntity, false);
+
+			// 유저 레디스 저장
+			userRedisJob(userOutVo);
+
+			return userOutVo;
+		}
+	}
+
+	@Override
+	public void logoutUser(UserInVo user) {
+		if (userRepository.findUserByIdx(user.getIdx()).isEmpty()) {
+			throw new EntityNotFoundException("Can not find user info");
+		}
+
 		ThreadUtils.runTask(()->{
 			try {
-				redisUtils.saveLoginUser(UserOutVo.of(user, false));
+				redisUtils.deleteLoginUser(user.getIdx());
 				return true;
 			} catch (Exception e) {
-				log.error("Unknown Exception :: {} : {}", e.getMessage(), e);
+				log.error("=== Error User :: {}", user.toString());
+				log.error("=== Unknown Exception :: {} : {}", e.getMessage(), e);
 				return false;
 			}
-		}, 10, 10, "Save Login User");
-		return UserOutVo.of(user, true);
+		}, 10, 10, "Delete Login User Info");
 	}
 
 	@Override
@@ -91,4 +141,20 @@ public class AuthServiceImpl implements AuthService {
 
 		return false;
 	}
+
+	/**
+	 * 유저 정보를 레디스에 저장
+	 * @param user
+	 */
+	private void userRedisJob(UserOutVo user){
+		ThreadUtils.runTask(()->{
+			try {
+				redisUtils.saveLoginUser(user);
+				return true;
+			} catch (Exception e) {
+				return false;
+			}
+		}, 10, 10, "Save Login User Info");
+	}
+
 }

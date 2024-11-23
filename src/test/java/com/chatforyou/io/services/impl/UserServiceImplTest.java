@@ -47,7 +47,7 @@ class UserServiceImplTest {
     @Test
     @DisplayName("base64 인코딩 디코딩")
     void baseEncodeAndDecode(){
-        final String origin = "testPassword";
+        final String origin = "test12!@";
         String encodeStr = AuthUtils.getEncodeStr(origin);
         System.out.println("encodePwd :: "+ encodeStr);
         String decodePwd = AuthUtils.getDecodeStr(encodeStr.getBytes());

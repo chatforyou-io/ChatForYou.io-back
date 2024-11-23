@@ -13,7 +13,8 @@ public enum DataType {
     USER_COUNT("user_count", 6),
     USER_LIST("user_list", 7),
     FAVORITES("favorites", 8),
-    LOGIN_USER("login_user", 9)
+    LOGIN_USER("login_user", 9),
+    USER_REFRESH_TOKEN("user_refresh_token", 10)
     ;
 
     private final int code;

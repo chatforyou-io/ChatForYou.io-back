@@ -6,13 +6,10 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
-public class UserInVo {
+public class UserUpdateVo {
+    @NonNull
     private Long idx;
     private String id;
-    private String pwd;
-    private String confirmPwd;
-    private Boolean usePwd;
+    private String newPwd;
     private String nickName;
-    private String name;
 }

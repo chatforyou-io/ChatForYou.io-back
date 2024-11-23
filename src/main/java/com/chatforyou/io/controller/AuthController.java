@@ -5,13 +5,15 @@ import com.chatforyou.io.client.OpenViduJavaClientException;
 import com.chatforyou.io.client.Recording;
 import com.chatforyou.io.config.SecurityConfig;
 import com.chatforyou.io.models.AdminSessionData;
+import com.chatforyou.io.models.JwtPayload;
 import com.chatforyou.io.models.ValidateType;
-import com.chatforyou.io.services.AuthService;
-import com.chatforyou.io.services.MailService;
-import com.chatforyou.io.services.OpenViduService;
-import com.chatforyou.io.services.UserService;
+import com.chatforyou.io.models.in.SocialUserInVo;
+import com.chatforyou.io.models.in.UserInVo;
+import com.chatforyou.io.models.out.UserOutVo;
+import com.chatforyou.io.services.*;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.UnsupportedEncodingException;
@@ -26,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -49,48 +53,69 @@ public class AuthController {
 	private String CALL_OPENVIDU_CERTTYPE;
 
 	private final MailService mailService;
-	private final UserService userService;
-
 	private final OpenViduService openviduService;
-
 	private final AuthService authService;
-
-//	/** TODO 테스트 후 삭제 예정
-//	 * 테스트용 사용자 로그인 처리 메서드
-//	 *
-//	 * @param params 요청 본문에서 받은 사용자명과 비밀번호
-//	 * @return 로그인 성공 여부에 따른 응답 (HTTP 상태 코드 포함)
-//	 */
-//	@PostMapping("/login")
-//	public ResponseEntity<?> login(@RequestBody(required = true) Map<String, String> params) {
-//
-//		// 요청으로부터 사용자명과 비밀번호를 가져옴
-//		String username = params.get("username");
-//		String password = params.get("password");
-//
-//		// 환경 변수에 저장된 사용자명과 비밀번호와 일치하는지 확인
-//		if (username.equals(CALL_USER) && password.equals(CALL_SECRET)) {
-//			System.out.println("Login succeeded");
-//			return new ResponseEntity<>("", HttpStatus.OK);
-//		} else {
-//			return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
-//		}
-//	}
+	private final JwtService jwtService;
 
 	/**
 	 * 사용자 로그인 처리 메서드
-	 * @param id 사용자 아이디
-	 * @param password 사용자 패스워드
+	 * @param
+	 * @param
 	 * @return 로그인 성공 여부에 따른 응답 (HTTP 상태 코드 포함)
 	 */
 	@PostMapping("/login")
-	public ResponseEntity<Map<String, Object>> login(@RequestParam String id, @RequestParam String password) {
+	public ResponseEntity<?> login(@RequestBody UserInVo user, HttpServletResponse response) {
 
 		// 요청으로부터 사용자명과 비밀번호를 가져옴
-		Map<String, Object> response = new HashMap<>();
-		response.put("result", "success");
-		response.put("userData", authService.getLoginUserInfo(id, password));
-		return new ResponseEntity<>(response, HttpStatus.OK);
+		Map<String, Object> result = new ConcurrentHashMap<>();
+		UserOutVo loginUserInfo = authService.getLoginUserInfo(user.getId(), user.getPwd());
+		result.put("result", "success");
+		result.put("userData", loginUserInfo);
+
+		response.addHeader("AccessToken", jwtService.createAccessToken(JwtPayload.of(loginUserInfo)));
+		response.addHeader("RefreshToken", jwtService.createRefreshToken(JwtPayload.of(loginUserInfo)));
+
+		return new ResponseEntity<>(result, HttpStatus.OK);
+	}
+
+	@PostMapping("/login/social")
+	public ResponseEntity<?> socialLogin(@RequestBody SocialUserInVo socialUser, HttpServletResponse response) throws BadRequestException {
+
+		// 요청으로부터 사용자명과 비밀번호를 가져옴
+		Map<String, Object> result = new ConcurrentHashMap<>();
+		UserOutVo loginUserInfo = authService.getSocialLoginUserInfo(socialUser);
+		result.put("result", "success");
+		result.put("userData", loginUserInfo);
+
+		response.addHeader("AccessToken", jwtService.createAccessToken(JwtPayload.of(loginUserInfo)));
+		response.addHeader("RefreshToken", jwtService.createRefreshToken(JwtPayload.of(loginUserInfo)));
+
+		return new ResponseEntity<>(result, HttpStatus.OK);
+	}
+
+	@PostMapping("/logout")
+	public ResponseEntity<?> logout(
+			@RequestHeader("Authorization") String bearerToken,
+			@RequestBody UserInVo user, HttpServletRequest request, HttpServletResponse response) throws BadRequestException {
+		Map<String, Object> result = new ConcurrentHashMap<>();
+		jwtService.verifyAccessToken(user.getIdx(), bearerToken);
+		authService.logoutUser(user);
+		result.put("result", "success");
+		return new ResponseEntity<>(result, HttpStatus.OK);
+	}
+
+	@PostMapping("/refresh_token")
+	public ResponseEntity<?> refreshToken(
+			@RequestHeader("Authorization") String bearerToken,
+			@RequestBody UserInVo user, HttpServletRequest request, HttpServletResponse response) throws BadRequestException {
+
+		Map<String, String> tokenResult = jwtService.reissueToken(user.getIdx(), bearerToken);
+		response.addHeader("AccessToken", tokenResult.get("accessToken"));
+		response.addHeader("RefreshToken", tokenResult.get("refreshToken"));
+
+		Map<String, Object> result = new ConcurrentHashMap<>();
+		result.put("result", "success");
+		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
 
 	/**

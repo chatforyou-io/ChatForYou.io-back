@@ -7,12 +7,14 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class UserInVo {
+public class SocialUserInVo {
     private Long idx;
+    private String provider;
+    private String providerAccountId;
     private String id;
-    private String pwd;
-    private String confirmPwd;
     private Boolean usePwd;
     private String nickName;
     private String name;
+    private String tokenType;
+    private String type;
 }

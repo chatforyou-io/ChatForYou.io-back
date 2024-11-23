@@ -2,10 +2,13 @@ package com.chatforyou.io.controller;
 
 import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.models.in.UserInVo;
+import com.chatforyou.io.models.in.UserUpdateVo;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.services.AuthService;
+import com.chatforyou.io.services.JwtService;
 import com.chatforyou.io.services.UserService;
+import com.chatforyou.io.services.impl.JwtServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
@@ -22,12 +25,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserController {
     /**
+     * TODO 개발 필요
      * 이메일 정규식
      * 비밀번호 최소 8자 {영문 특수문자} 포함
      */
 
     private final UserService userService;
     private final AuthService authService;
+    private final JwtService jwtService;
 
     @GetMapping("/info")
     public ResponseEntity<Map<String, Object>> getUserInfo(
@@ -62,24 +67,34 @@ public class UserController {
 
 
     @PatchMapping("/update")
-    public ResponseEntity<Map<String, Object>> updateUser(@RequestBody UserInVo user) throws BadRequestException {
+    public ResponseEntity<Map<String, Object>> updateUser(@RequestHeader("Authorization") String bearerToken,
+                                                          @RequestBody UserUpdateVo userVo) throws BadRequestException {
+        jwtService.verifyAccessToken(userVo.getIdx(), bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
-        response.put("userData", userService.updateUser(user));
+        response.put("userData", userService.updateUser(userVo));
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PatchMapping("/update/pwd")
+    public ResponseEntity<Map<String, Object>> updateUserPasswd(@RequestHeader("Authorization") String bearerToken,
+                                                                @RequestBody UserUpdateVo userVo) throws BadRequestException {
+        jwtService.verifyAccessToken(userVo.getIdx(), bearerToken);
+        Map<String, Object> response = new HashMap<>();
+        response.put("result", "success");
+        response.put("userData", userService.updateUserPwd(userVo));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @DeleteMapping("/delete")
-    public ResponseEntity<Map<String, Object>> deleteUser(@RequestBody UserInVo user) throws BadRequestException {
-        Map<String, Object> response = new HashMap<String, Object>();
-        boolean result = userService.deleteUser(user);
-        if (result) {
-            response.put("result", "success");
-            return new ResponseEntity<>(response, HttpStatus.OK);
-        } else {
-            response.put("result", "fail delete user");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<Map<String, Object>> deleteUser(
+            @RequestHeader("Authorization") String bearerToken,
+            @RequestBody UserInVo user) throws BadRequestException {
+        jwtService.verifyAccessToken(user.getIdx(), bearerToken);
+        userService.deleteUser(user);
+        Map<String, Object> response = new HashMap<>();
+        response.put("result", "success");
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
 
