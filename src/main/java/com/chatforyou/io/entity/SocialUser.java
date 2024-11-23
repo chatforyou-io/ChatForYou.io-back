@@ -23,8 +23,8 @@ public class SocialUser {
     @Column(name = "PROVIDER", length = 50)
     private String provider;
 
-    @Column(name = "ACCOUNT_ID", length = 50)
-    private String accountId;
+    @Column(name = "PROVIDER_ACCOUNT_ID", length = 100)
+    private String providerAccountId;
 
     @Column(name = "TOKEN_TYPE", length = 20)
     private String tokenType;
@@ -36,7 +36,7 @@ public class SocialUser {
         return SocialUser.builder()
                 .user(user)
                 .provider(socialUserInVo.getProvider())
-                .accountId(socialUserInVo.getProviderAccountId())
+                .providerAccountId(socialUserInVo.getProviderAccountId())
                 .tokenType(socialUserInVo.getTokenType())
                 .type(socialUserInVo.getType())
                 .build();

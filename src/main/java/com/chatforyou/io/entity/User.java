@@ -75,11 +75,11 @@ public class User {
 
     public static User ofSocialUser(SocialUserInVo socialUser){
         return User.builder()
-                .id(socialUser.getProviderAccountId())
+                .id(socialUser.getId())
                 .pwd(Base64.getEncoder().encode(UUID.randomUUID().toString().getBytes()).toString())
                 .usePwd(false)
                 .name(socialUser.getName())
-                .nickName(socialUser.getNickName())
+                .nickName(socialUser.getName())
                 .createDate(new Date().getTime())
                 .build();
     }

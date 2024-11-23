@@ -451,8 +451,8 @@ public class RedisUtils {
         masterTemplate.opsForHash().put(redisKey, DataType.USER_REFRESH_TOKEN.getType(), refreshToken);
     }
 
-    public void deleteLoginUser(UserInVo user) {
-        String redisKey = "user:" + user.getIdx();
+    public void deleteLoginUser(Long userIdx) {
+        String redisKey = "user:" +userIdx;
         masterTemplate.delete(redisKey);
     }
 

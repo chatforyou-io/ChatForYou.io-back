@@ -11,6 +11,7 @@ public class SocialUserInVo {
     private Long idx;
     private String provider;
     private String providerAccountId;
+    private String id;
     private Boolean usePwd;
     private String nickName;
     private String name;

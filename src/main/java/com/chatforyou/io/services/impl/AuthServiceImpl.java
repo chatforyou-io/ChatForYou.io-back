@@ -80,7 +80,7 @@ public class AuthServiceImpl implements AuthService {
 		if (socialUserInVo.getProvider() == null || socialUserInVo.getProviderAccountId() == null) {
 			throw new BadRequestException("Need Provider or providerAccountId");
 		}
-		Optional<SocialUser> socialUser = socialRepository.findSocialByProviderAndAccountId(socialUserInVo.getProviderAccountId(), socialUserInVo.getProvider());
+		Optional<SocialUser> socialUser = socialRepository.findSocialUserByProviderAccountIdAndAndProvider(socialUserInVo.getProviderAccountId(), socialUserInVo.getProvider());
 		User user = null;
 		if (socialUser.isPresent()) { // 소셜 로그인 유저 정보가 있다면
 			UserOutVo userOutVo = UserOutVo.of(socialUser.get(), false);
@@ -115,7 +115,7 @@ public class AuthServiceImpl implements AuthService {
 
 		ThreadUtils.runTask(()->{
 			try {
-				redisUtils.deleteLoginUser(user);
+				redisUtils.deleteLoginUser(user.getIdx());
 				return true;
 			} catch (Exception e) {
 				log.error("=== Error User :: {}", user.toString());
