@@ -3,12 +3,10 @@ package com.chatforyou.io.services.impl;
 import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
+import com.chatforyou.io.controller.ExceptionController;
 import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.entity.User;
-import com.chatforyou.io.models.DataType;
-import com.chatforyou.io.models.OpenViduDto;
-import com.chatforyou.io.models.SearchType;
-import com.chatforyou.io.models.ValidateType;
+import com.chatforyou.io.models.*;
 import com.chatforyou.io.models.in.ChatRoomInVo;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.models.out.ConnectionOutVo;
@@ -22,6 +20,7 @@ import com.chatforyou.io.utils.RedisUtils;
 import com.chatforyou.io.utils.ThreadUtils;
 import io.github.dengliming.redismodule.redisearch.index.Document;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
@@ -43,9 +42,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     @Transactional // 에러가 발생할 시 rollback 될 수 있도록 @Transactional 사용
-    public ChatRoomOutVo createChatRoom(ChatRoomInVo chatRoomInVo) throws BadRequestException {
+    public ChatRoomOutVo createChatRoom(ChatRoomInVo chatRoomInVo, JwtPayload jwtPayload) throws BadRequestException {
         // 1. 데이터 검증
         checkChatRoomValidate(chatRoomInVo);
+
+        // 1-2 토큰 검증
+        if (!Objects.equals(chatRoomInVo.getUserIdx(), jwtPayload.getIdx())) {
+            throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
+        }
 
         User userEntity = userRepository.findUserByIdx(chatRoomInVo.getUserIdx())
                 .orElseThrow(() -> new EntityNotFoundException("can not find user"));
@@ -91,7 +95,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             String sessionId = document.getFields().get("sessionId").toString().replace("\"", "");
             Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(sessionId);
             if (allChatRoomData.isEmpty() || allChatRoomData.get(DataType.CHATROOM.getType()) == null) {
-                throw new BadRequestException("Can not find ChatRoom");
+                continue;
             }
             ChatRoomInVo chatRoom = (ChatRoomInVo) allChatRoomData.get(DataType.CHATROOM.getType());
             Integer currentUserCount = (Integer) allChatRoomData.get(DataType.USER_COUNT.getType());
@@ -104,7 +108,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    public Map<String, Object> joinChatRoom(String sessionId, Long userIdx) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException {
+    public Map<String, Object> joinChatRoom(String sessionId, Long userIdx, JwtPayload jwtPayload) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException {
         Map<String, Object> result = new LinkedHashMap<>();
         Map<String, String> tokens = new HashMap<>();
 
@@ -112,6 +116,11 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .orElseThrow(() -> new EntityNotFoundException("Can not find ChatRoom"));
         User joinUser = userRepository.findUserByIdx(userIdx)
                 .orElseThrow(() -> new EntityNotFoundException("Can not find user"));
+
+        // 1-2 토큰 검증
+        if (!Objects.equals(userIdx, jwtPayload.getIdx())) {
+            throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
+        }
 
         // redis 에서 chatroom 정보 확인
         Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(sessionId);
@@ -193,12 +202,18 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     @Transactional
-    public ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo chatRoomInVo) throws BadRequestException {
+    public ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo chatRoomInVo, JwtPayload jwtPayload) throws BadRequestException {
         ChatRoom chatRoomEntity = chatRoomRepository.findChatRoomBySessionId(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Can not find ChatRoom"));
 
         ChatRoom newChatRoomEntity = ChatRoom.ofUpdate(chatRoomEntity, chatRoomInVo);
         chatRoomRepository.saveAndFlush(newChatRoomEntity);
+
+        ChatRoomOutVo redisChatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomOutVo.class);
+        if (!Objects.equals(redisChatRoom.getUserIdx(), jwtPayload.getIdx())) {
+            throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
+        }
+
         int currentUserCount = redisUtils.getUserCount(sessionId);
         ChatRoomOutVo chatRoomOutVo = ChatRoomOutVo.of(newChatRoomEntity, currentUserCount);
         redisUtils.setObjectOpsHash(sessionId, DataType.CHATROOM, chatRoomOutVo);
@@ -208,7 +223,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     @Transactional
-    public boolean deleteChatRoom(String sessionId) {
+    public boolean deleteChatRoom(String sessionId, JwtPayload jwtPayload, boolean isSystem) throws BadRequestException {
+        if (!isSystem) {
+            ChatRoomOutVo redisChatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomOutVo.class);
+            if (!Objects.equals(redisChatRoom.getUserIdx(), jwtPayload.getIdx())) {
+                throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
+            }
+        }
+
         if (chatRoomRepository.findChatRoomBySessionId(sessionId).isPresent()) {
             boolean result = chatRoomRepository.deleteChatRoomBySessionId(sessionId) == 1;
             if (!result) {

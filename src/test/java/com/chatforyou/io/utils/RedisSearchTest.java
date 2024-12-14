@@ -31,38 +31,49 @@ public class RedisSearchTest {
     RediSearchClient rediSearchClient;
 
     @Test
-    @DisplayName("레디스 검색")
-    void searchRedis() throws BadRequestException {
-        // 검색 실행
+    @DisplayName("레디스 전체 데이터 검색")
+    void searchAllRedisData() throws BadRequestException {
+        // RediSearch 클라이언트를 사용하여 chatRoomIndex 검색 실행
         RediSearch chatRoomSearch = rediSearchClient.getRediSearch("chatRoomIndex");
-        // Redis 검색 결과에서 openvidu 필드의 JSON 문자열 가져오기
-        String openviduDataString = chatRoomSearch.search("@creator:한글유저", new SearchOptions())
-                .getDocuments()
-                .get(0)
-                .getFields()
-                .get("chatroom")
-                .toString();
 
-        // Jackson ObjectMapper를 사용하여 JSON을 OpenViduDto 객체로 변환
-        ObjectMapper objectMapper = new ObjectMapper();
-        try {
-            ChatRoomInVo chatRoomInVo = objectMapper.readValue(openviduDataString, ChatRoomInVo.class);
-            System.out.println("chatroom 객체: " + chatRoomInVo);
+        // 모든 문서를 검색
+        List<Document> documents = chatRoomSearch.search("*", new SearchOptions()).getDocuments();
 
-        } catch (Exception e) {
-            e.printStackTrace();
+        // 모든 검색 결과 순회
+        for (Document doc : documents) {
+            logger.info("sessionId : {}",doc.getId());
+            logger.info("roomName : {}",doc.getFields().get("roomName"));
         }
     }
 
     @Test
-    @DisplayName("레디스 페이징 검색")
-    void searchPaging() throws BadRequestException {
+    @DisplayName("레디스 단일 조건 검색")
+    void searchRedis() throws BadRequestException {
+        // 검색 실행
+        RediSearch chatRoomSearch = rediSearchClient.getRediSearch("chatRoomIndex");
+        // Redis 검색 결과에서 openvidu 필드의 JSON 문자열 가져오기
+        List<Document> documents = chatRoomSearch.search(
+                "@creator:*teri*",
+                new SearchOptions()
+        ).getDocuments();
+
+        // 모든 검색 결과 순회
+        for (Document doc : documents) {
+            logger.info("sessionId : {}",doc.getId());
+            logger.info("roomName : {}",doc.getFields().get("roomName"));
+            logger.info("creator : {}",doc.getFields().get("creator"));
+        }
+    }
+
+    @Test
+    @DisplayName("레디스 다중 조건 검색")
+    void searchKeyword() throws BadRequestException {
         // 검색 실행
         RediSearch chatRoomSearch = rediSearchClient.getRediSearch("chatRoomIndex");
         // Redis 검색 결과에서 openvidu 필드의 JSON 문자열 가져오기
         int pageNumber = 0;  // 원하는 페이지 번호
         int pageSize = 5;    // 한 페이지에 표시할 항목 수
-        String keyword = "한글";
+        String keyword = "aabb";
         String queryParam = "((@creator:*" + keyword + "*) | (@roomName:*" + keyword + "*))";
 
 
@@ -72,7 +83,11 @@ public class RedisSearchTest {
         ).getDocuments();
 
 
-        logger.info("result :: {}", documents);
+        // 모든 검색 결과 순회
+        for (Document doc : documents) {
+            logger.info("sessionId : {}",doc.getId());
+            logger.info("roomName : {}",doc.getFields().get("roomName"));
+        }
     }
 
     @Test

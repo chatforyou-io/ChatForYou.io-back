@@ -94,7 +94,7 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public JwtPayload verifyAccessToken(Long userIdx, String jwtToken) throws BadRequestException {
+    public JwtPayload verifyAccessToken(String jwtToken) throws BadRequestException {
         // TODO DB 에서 유저 찾아서 검증하는 로직은 모두 이쪽을 이동 필요?? >> 근데 db 에서 가져오면서 바로 예외처리하는데 굳이 2번해야함?
         String token = this.subStrBearerToken(jwtToken);
         try{
@@ -106,11 +106,6 @@ public class JwtServiceImpl implements JwtService {
                     .parseClaimsJws(token);
 
             Claims claims = claimsJws.getBody();
-            Long userIdxInToken = claims.get("idx", Long.class);
-            if (userIdx.longValue() != userIdxInToken.longValue()) {
-                throw new BadRequestException("Does not match User Info :: USER_IDX");
-            }
-
             return JwtPayload.builder()
                     .userId(claims.get("userId", String.class))
                     .idx(claims.get("idx", Long.class))

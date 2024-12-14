@@ -125,6 +125,7 @@ public class ExceptionController {
         response.put("code", "401");
         response.put("message", "Bearer token is required.");
         log.error("ExpiredJwtException :: Bearer Token Error");
+        log.error("ExpiredJwtException : {}", ex.getMessage(), ex);
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 
@@ -134,6 +135,7 @@ public class ExceptionController {
         response.put("code", "401");
         response.put("message", "Bearer token is required.");
         log.error("Required Request header 'Authorization' :: Bearer Token Error");
+        log.error("Authorization Error : {}", ex.getMessage(), ex);
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 

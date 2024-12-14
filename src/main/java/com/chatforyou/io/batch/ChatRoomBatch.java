@@ -2,6 +2,7 @@ package com.chatforyou.io.batch;
 
 import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
+import com.chatforyou.io.models.JwtPayload;
 import com.chatforyou.io.services.ChatRoomService;
 import com.chatforyou.io.utils.RedisUtils;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class ChatRoomBatch {
         log.info("=== ChatRoom Batch Job Start :: {} ==== ", sdf.format(new Date().getTime()));
         List<String> sessionList = redisUtils.getSessionListForDelete();
         for (String sessionId : sessionList) {
-            chatRoomService.deleteChatRoom(sessionId);
+            chatRoomService.deleteChatRoom(sessionId, JwtPayload.builder().build(), true);
         }
         log.info("=== ChatRoom Batch Job End :: {} ==== ", sdf.format(new Date().getTime()));
     }

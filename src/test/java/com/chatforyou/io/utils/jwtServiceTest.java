@@ -79,7 +79,7 @@ class jwtServiceTest {
         UserOutVo userVo = createUserVo();
         String accessToken = jwtService.createAccessToken(payload);
 
-        JwtPayload resultPayload = jwtService.verifyAccessToken(userVo.getIdx(), "Bearer "+accessToken);
+        JwtPayload resultPayload = jwtService.verifyAccessToken("Bearer "+accessToken);
         logger.info("result ::: {}", resultPayload.toString());
     }
 
@@ -100,7 +100,7 @@ class jwtServiceTest {
                 .signWith(Jwts.SIG.HS256.key().build()) // secret 불일치
                 .compact();
 
-        Assertions.assertThatThrownBy(() -> jwtService.verifyAccessToken(userVo.getIdx(), "Bearer "+someJwt))
+        Assertions.assertThatThrownBy(() -> jwtService.verifyAccessToken("Bearer "+someJwt))
                 .isInstanceOf(SignatureException.class);
     }
 
@@ -111,7 +111,7 @@ class jwtServiceTest {
         UserOutVo userVo = createUserVo();
         String expiredToken = jwtService.createAccessToken(payload);
 
-        Assertions.assertThatThrownBy(() -> jwtService.verifyAccessToken(userVo.getIdx(), "Bearer "+expiredToken))
+        Assertions.assertThatThrownBy(() -> jwtService.verifyAccessToken("Bearer "+expiredToken))
                 .isInstanceOf(ExpiredJwtException.class);
     }
 }
