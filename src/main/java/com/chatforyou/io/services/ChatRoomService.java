@@ -20,5 +20,5 @@ public interface ChatRoomService {
     ChatRoomOutVo findChatRoomBySessionId(String sessionId) throws BadRequestException;
     Boolean checkRoomPassword(String sessionId, String pwd) throws BadRequestException;
     ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo chatRoomInVo, JwtPayload jwtPayload) throws BadRequestException;
-    boolean deleteChatRoom(String sessionId, JwtPayload jwtPayload, boolean isSystem) throws OpenViduJavaClientException, OpenViduHttpException;
+    boolean deleteChatRoom(String sessionId, JwtPayload jwtPayload, boolean isSystem) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException;
 }

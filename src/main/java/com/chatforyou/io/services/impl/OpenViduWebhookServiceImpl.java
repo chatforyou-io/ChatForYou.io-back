@@ -20,6 +20,7 @@ import com.chatforyou.io.utils.ThreadUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 import java.util.Map;
 
@@ -34,7 +35,7 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
     private final OpenViduService openViduService;
 
     @Override
-    public void processWebhookEvent(OpenViduWebhookData webhookData) throws OpenViduJavaClientException, OpenViduHttpException {
+    public void processWebhookEvent(OpenViduWebhookData webhookData) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
         log.info("====== WebHookData ::: {}", webhookData.toString());
 
         String sessionId = webhookData.getSessionId();
