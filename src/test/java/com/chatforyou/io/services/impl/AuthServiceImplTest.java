@@ -7,6 +7,7 @@ import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.repository.SocialRepository;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.AuthService;
+import org.apache.coyote.BadRequestException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -61,7 +62,7 @@ class AuthServiceImplTest {
 
     @Test
     @DisplayName("소셜 유저 로그인 테스트 :: 로그인 이력 있는 경우")
-    public void findSocialUser(){
+    public void findSocialUser() throws BadRequestException {
         SocialUserInVo socialUser = SocialUserInVo.builder()
                 .provider("google")
                 .providerAccountId("social@test.com")
@@ -75,7 +76,7 @@ class AuthServiceImplTest {
 
     @Test
     @DisplayName("소셜 유저 로그인 테스트 :: 로그인 이력 없는 경우")
-    public void findSocialUserNoLogined(){
+    public void findSocialUserNoLogined() throws BadRequestException {
         SocialUserInVo socialUser = SocialUserInVo.builder()
                 .provider("google")
                 .providerAccountId("social@test.com")

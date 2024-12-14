@@ -98,7 +98,7 @@ public class AuthController {
 			@RequestHeader("Authorization") String bearerToken,
 			@RequestBody UserInVo user, HttpServletRequest request, HttpServletResponse response) throws BadRequestException {
 		Map<String, Object> result = new ConcurrentHashMap<>();
-		jwtService.verifyAccessToken(user.getIdx(), bearerToken);
+		jwtService.verifyAccessToken(bearerToken);
 		authService.logoutUser(user);
 		result.put("result", "success");
 		return new ResponseEntity<>(result, HttpStatus.OK);

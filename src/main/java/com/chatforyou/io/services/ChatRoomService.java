@@ -2,6 +2,7 @@ package com.chatforyou.io.services;
 
 import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
+import com.chatforyou.io.models.JwtPayload;
 import com.chatforyou.io.models.OpenViduDto;
 import com.chatforyou.io.models.in.ChatRoomInVo;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
@@ -11,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface ChatRoomService {
-    ChatRoomOutVo createChatRoom(ChatRoomInVo chatRoomInVo) throws BadRequestException;
+    ChatRoomOutVo createChatRoom(ChatRoomInVo chatRoomInVo, JwtPayload jwtPayload) throws BadRequestException;
     OpenViduDto getOpenviduDataBySessionId(String sessionId) throws BadRequestException;
     List<ChatRoomOutVo> getChatRoomList(String keyword, int pageNum, int pageSize) throws BadRequestException;
     Map<String, Object> joinChatRoom(String sessionId, Long userIdx) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException;

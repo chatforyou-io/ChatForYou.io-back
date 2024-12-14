@@ -3,12 +3,10 @@ package com.chatforyou.io.services.impl;
 import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
+import com.chatforyou.io.controller.ExceptionController;
 import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.entity.User;
-import com.chatforyou.io.models.DataType;
-import com.chatforyou.io.models.OpenViduDto;
-import com.chatforyou.io.models.SearchType;
-import com.chatforyou.io.models.ValidateType;
+import com.chatforyou.io.models.*;
 import com.chatforyou.io.models.in.ChatRoomInVo;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.models.out.ConnectionOutVo;
@@ -43,9 +41,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     @Transactional // 에러가 발생할 시 rollback 될 수 있도록 @Transactional 사용
-    public ChatRoomOutVo createChatRoom(ChatRoomInVo chatRoomInVo) throws BadRequestException {
+    public ChatRoomOutVo createChatRoom(ChatRoomInVo chatRoomInVo, JwtPayload jwtPayload) throws BadRequestException {
         // 1. 데이터 검증
         checkChatRoomValidate(chatRoomInVo);
+
+        // 1-2 토큰 검증
+        if (!Objects.equals(chatRoomInVo.getUserIdx(), jwtPayload.getIdx())) {
+            throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
+        }
 
         User userEntity = userRepository.findUserByIdx(chatRoomInVo.getUserIdx())
                 .orElseThrow(() -> new EntityNotFoundException("can not find user"));
@@ -91,7 +94,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             String sessionId = document.getFields().get("sessionId").toString().replace("\"", "");
             Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(sessionId);
             if (allChatRoomData.isEmpty() || allChatRoomData.get(DataType.CHATROOM.getType()) == null) {
-                throw new BadRequestException("Can not find ChatRoom");
+                continue;
             }
             ChatRoomInVo chatRoom = (ChatRoomInVo) allChatRoomData.get(DataType.CHATROOM.getType());
             Integer currentUserCount = (Integer) allChatRoomData.get(DataType.USER_COUNT.getType());

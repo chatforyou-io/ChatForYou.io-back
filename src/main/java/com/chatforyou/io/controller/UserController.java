@@ -45,7 +45,8 @@ public class UserController {
     }
 
     @GetMapping("/check_nickname")
-    public ResponseEntity<Map<String, Object>> checkNickName(@RequestParam String nickName) throws BadRequestException {
+    public ResponseEntity<Map<String, Object>> checkNickName(
+            @RequestParam String nickName) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         if (authService.validateStrByType(ValidateType.NICKNAME, nickName)) {
@@ -69,7 +70,7 @@ public class UserController {
     @PatchMapping("/update")
     public ResponseEntity<Map<String, Object>> updateUser(@RequestHeader("Authorization") String bearerToken,
                                                           @RequestBody UserUpdateVo userVo) throws BadRequestException {
-        jwtService.verifyAccessToken(userVo.getIdx(), bearerToken);
+        jwtService.verifyAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         response.put("userData", userService.updateUser(userVo));
@@ -79,7 +80,7 @@ public class UserController {
     @PatchMapping("/update/pwd")
     public ResponseEntity<Map<String, Object>> updateUserPasswd(@RequestHeader("Authorization") String bearerToken,
                                                                 @RequestBody UserUpdateVo userVo) throws BadRequestException {
-        jwtService.verifyAccessToken(userVo.getIdx(), bearerToken);
+        jwtService.verifyAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         response.put("userData", userService.updateUserPwd(userVo));
@@ -90,7 +91,7 @@ public class UserController {
     public ResponseEntity<Map<String, Object>> deleteUser(
             @RequestHeader("Authorization") String bearerToken,
             @RequestBody UserInVo user) throws BadRequestException {
-        jwtService.verifyAccessToken(user.getIdx(), bearerToken);
+        jwtService.verifyAccessToken(bearerToken);
         userService.deleteUser(user);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
@@ -109,10 +110,12 @@ public class UserController {
      */
     @GetMapping("/list")
     public ResponseEntity<Map<String, Object>> getLoginUserList(
+            @RequestHeader("Authorization") String bearerToken,
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "pageNum", required = false, defaultValue = "0") String pageNumStr,
             @RequestParam(value = "pageSize", required = false, defaultValue = "20") String pageSizeStr
     ) throws BadRequestException {
+        jwtService.verifyAccessToken(bearerToken);
         Map<String, Object> response = new LinkedHashMap<>();
         List<UserOutVo> userList = userService.getUserList(keyword, Integer.parseInt(pageNumStr), Integer.parseInt(pageSizeStr));
         response.put("result", "success");
