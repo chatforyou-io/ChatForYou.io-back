@@ -52,6 +52,8 @@ public class ChatRoom {
 
     @Column(name = "CREATE_DATE", nullable = false, updatable = false)
     private Long createDate;
+    @Column(name = "UPDATE_DATE", nullable = true, updatable = true)
+    private Long updateDate;
 
     // TODO 삭제 필요한지 확인
     @Deprecated
@@ -59,6 +61,7 @@ public class ChatRoom {
     private Set<OpenViduInfo> openViduInfos;
 
     public static ChatRoom of(ChatRoomInVo chatRoomInVo, User user){
+        long currentTime = new Date().getTime();
         return ChatRoom.builder()
                 .user(user)
                 .sessionId(UUID.randomUUID().toString())
@@ -69,7 +72,8 @@ public class ChatRoom {
                 .useRtc(Objects.isNull(chatRoomInVo.getUseRtc()) ? false : chatRoomInVo.getUseRtc())
                 .desc(chatRoomInVo.getDesc())
                 .maxUserCount(chatRoomInVo.getMaxUserCount())
-                .createDate(new Date().getTime())
+                .createDate(currentTime)
+                .updateDate(currentTime)
                 .build();
     }
 
@@ -86,6 +90,7 @@ public class ChatRoom {
                 .desc(StringUtil.isNullOrEmpty(chatRoomInVo.getDesc()) ? chatRoom.getDesc() : chatRoomInVo.getDesc())
                 .maxUserCount(chatRoomInVo.getMaxUserCount() == 0 ? chatRoom.getMaxUserCount() : chatRoomInVo.getMaxUserCount())
                 .createDate(chatRoom.getCreateDate())
+                .updateDate(new Date().getTime())
                 .build();
     }
 

@@ -29,6 +29,8 @@ public class ChatRoomOutVo implements Serializable {
     private Integer maxUserCount;
     @Setter
     private List<UserOutVo> userList;
+    private Long createDate;
+    private Long updateDate;
 
     public static ChatRoomOutVo of(ChatRoom chatRoom, int currentUserCount){
         return ChatRoomOutVo.builder()
@@ -41,6 +43,8 @@ public class ChatRoomOutVo implements Serializable {
                 .useRtc(chatRoom.getUseRtc())
                 .currentUserCount(currentUserCount)
                 .maxUserCount(chatRoom.getMaxUserCount())
+                .createDate(chatRoom.getCreateDate())
+                .updateDate(chatRoom.getUpdateDate())
                 .build();
     }
 
@@ -56,6 +60,8 @@ public class ChatRoomOutVo implements Serializable {
                 .currentUserCount(currentUserCount)
                 .maxUserCount(chatRoomInVo.getMaxUserCount())
                 .userList(list)
+                .createDate(chatRoomInVo.getCreateDate())
+                .updateDate(chatRoomInVo.getUpdateDate())
                 .build();
     }
 }

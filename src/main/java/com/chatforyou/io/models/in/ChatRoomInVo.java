@@ -20,9 +20,13 @@ public class ChatRoomInVo {
     private Boolean useRtc;
     private String desc;
     private Integer maxUserCount;
+    private Long createDate;
+    private Long updateDate;
 
-    public void setSessionIdAndCreator(String sessionId, String creator){
+    public void setRequiredRoomInfo(String sessionId, String creator, Long createDate, Long updateDate){
         this.sessionId = sessionId;
         this.creator = creator;
+        this.createDate = createDate;
+        this.updateDate = updateDate;
     }
 }

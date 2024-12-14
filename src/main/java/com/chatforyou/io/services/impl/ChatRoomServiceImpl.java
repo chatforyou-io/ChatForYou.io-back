@@ -66,7 +66,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         // 5. 새로운 room 저장
         ThreadUtils.runTask(() -> {
             try{
-                chatRoomInVo.setSessionIdAndCreator(chatRoomEntity.getSessionId(), userEntity.getNickName());
+                chatRoomInVo.setRequiredRoomInfo(chatRoomEntity.getSessionId(), userEntity.getNickName(), chatRoomEntity.getCreateDate(), chatRoomEntity.getUpdateDate());
                 redisUtils.createChatRoomJob(chatRoomEntity.getSessionId(), chatRoomInVo, openViduRoom);
                 return true;
             } catch (Exception e){
