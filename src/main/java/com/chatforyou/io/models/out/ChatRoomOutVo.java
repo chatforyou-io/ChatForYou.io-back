@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ToString
-@JsonIgnoreProperties({"pwd"})
+@JsonIgnoreProperties({"pwd", "currentUserCount", "userList"})
 public class ChatRoomOutVo implements Serializable {
     private static final long serialVersionUID = 1L;
     private Long userIdx;
@@ -25,7 +25,7 @@ public class ChatRoomOutVo implements Serializable {
     private Boolean usePrivate;
     private Boolean useRtc;
     @Setter
-    private int currentUserCount;
+    private Integer currentUserCount;
     private Integer maxUserCount;
     @Setter
     private List<UserOutVo> userList;
@@ -60,6 +60,21 @@ public class ChatRoomOutVo implements Serializable {
                 .currentUserCount(currentUserCount)
                 .maxUserCount(chatRoomInVo.getMaxUserCount())
                 .userList(list)
+                .createDate(chatRoomInVo.getCreateDate())
+                .updateDate(chatRoomInVo.getUpdateDate())
+                .build();
+    }
+
+    public static ChatRoomOutVo of(ChatRoomInVo chatRoomInVo){
+        return ChatRoomOutVo.builder()
+                .sessionId(chatRoomInVo.getSessionId())
+                .creator(chatRoomInVo.getCreator())
+                .userIdx(chatRoomInVo.getUserIdx())
+                .roomName(chatRoomInVo.getRoomName())
+                .usePwd(chatRoomInVo.getUsePwd())
+                .usePrivate(chatRoomInVo.getUsePrivate())
+                .useRtc(chatRoomInVo.getUseRtc())
+                .maxUserCount(chatRoomInVo.getMaxUserCount())
                 .createDate(chatRoomInVo.getCreateDate())
                 .updateDate(chatRoomInVo.getUpdateDate())
                 .build();
