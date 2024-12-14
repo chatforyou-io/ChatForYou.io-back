@@ -435,6 +435,21 @@ public class RedisUtils {
         return documents;
     }
 
+    public boolean searchDuplicateRoomName(String keyword) {
+        // searchType 에 맞춰 indexName 을 가져옴
+        RediSearch rediSearch = rediSearchClient.getRediSearch(SearchType.CHATROOM.getIndexName());
+
+        SearchOptions searchOptions = new SearchOptions()
+                .returnFields("roomName");  // sessionId 필드만 반환
+
+        long count = rediSearch.search(
+                "@roomName:*" + keyword + "*",
+                searchOptions
+        ).getTotal();
+
+        return count > 0;
+    }
+
     public void saveLoginUser(UserOutVo user) {
         // redisKey = user:userIdx
         String redisKey = "user:" + user.getIdx();

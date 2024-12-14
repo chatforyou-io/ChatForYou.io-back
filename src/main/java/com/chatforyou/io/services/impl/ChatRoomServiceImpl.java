@@ -54,6 +54,12 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         User userEntity = userRepository.findUserByIdx(chatRoomInVo.getUserIdx())
                 .orElseThrow(() -> new EntityNotFoundException("can not find user"));
 
+        // 중복 방 이름 확인
+        if (redisUtils.searchDuplicateRoomName(chatRoomInVo.getRoomName())) {
+            // 예외처리
+            throw new BadRequestException("Same RoomName Already Exist");
+        }
+
         // 2. entity 로 변환
         ChatRoom chatRoomEntity = ChatRoom.of(chatRoomInVo, userEntity);
 
