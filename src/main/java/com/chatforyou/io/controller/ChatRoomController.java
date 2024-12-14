@@ -201,13 +201,8 @@ public class ChatRoomController {
             @PathVariable("sessionId") String sessionId,
             @RequestBody ChatRoomInVo chatRoomInVo) throws BadRequestException {
         jwtService.verifyAccessToken(bearerToken);
-        Boolean result = chatRoomService.checkRoomPassword(sessionId, chatRoomInVo.getPwd());
-        if (Boolean.FALSE.equals(result)) {
-            throw new RuntimeException("Unknown Server Exception");
-        }
-
         Map<String, Object> response = new HashMap<>();
-        response.put("result", "success");
+        response.put("result", chatRoomService.checkRoomPassword(sessionId, chatRoomInVo.getPwd()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

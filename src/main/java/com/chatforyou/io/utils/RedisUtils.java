@@ -275,7 +275,7 @@ public class RedisUtils {
         masterTemplate.opsForHash().put(redisKey, "sessionId", sessionId);
         masterTemplate.opsForHash().put(redisKey, "creator", chatRoomInVo.getCreator());
         masterTemplate.opsForHash().put(redisKey, "roomName", chatRoomInVo.getRoomName());
-        masterTemplate.opsForHash().put(redisKey, "currentTime", new Date().getTime());
+        masterTemplate.opsForHash().put(redisKey, "createDate", chatRoomInVo.getCreateDate());
         // OpenVidu 객체 저장
         masterTemplate.opsForHash().put(redisKey, DataType.OPENVIDU.getType(), openViduDto);
     }
@@ -411,7 +411,7 @@ public class RedisUtils {
                 searchOptions = new SearchOptions()
                         .page(pageNum * pageSize, pageSize)  // 페이지 설정
                         .returnFields("sessionId")  // sessionId 필드만 반환
-                        .sort(new SortBy("currentTime", SortOrder.DESC));  // currentTime 기준 내림차순 정렬
+                        .sort(new SortBy("createDate", SortOrder.DESC));  // createDate 기준 내림차순 정렬
                 break;
 
             case LOGIN_USER:
@@ -433,6 +433,21 @@ public class RedisUtils {
         ).getDocuments();
 
         return documents;
+    }
+
+    public boolean searchDuplicateRoomName(String keyword) {
+        // searchType 에 맞춰 indexName 을 가져옴
+        RediSearch rediSearch = rediSearchClient.getRediSearch(SearchType.CHATROOM.getIndexName());
+
+        SearchOptions searchOptions = new SearchOptions()
+                .returnFields("roomName");  // sessionId 필드만 반환
+
+        long count = rediSearch.search(
+                "@roomName:*" + keyword + "*",
+                searchOptions
+        ).getTotal();
+
+        return count > 0;
     }
 
     public void saveLoginUser(UserOutVo user) {

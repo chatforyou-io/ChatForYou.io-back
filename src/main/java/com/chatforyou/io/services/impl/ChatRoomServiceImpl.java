@@ -26,6 +26,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -54,6 +56,12 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         User userEntity = userRepository.findUserByIdx(chatRoomInVo.getUserIdx())
                 .orElseThrow(() -> new EntityNotFoundException("can not find user"));
 
+        // 중복 방 이름 확인
+        if (redisUtils.searchDuplicateRoomName(chatRoomInVo.getRoomName())) {
+            // 예외처리
+            throw new BadRequestException("Same RoomName Already Exist");
+        }
+
         // 2. entity 로 변환
         ChatRoom chatRoomEntity = ChatRoom.of(chatRoomInVo, userEntity);
 
@@ -66,7 +74,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         // 5. 새로운 room 저장
         ThreadUtils.runTask(() -> {
             try{
-                chatRoomInVo.setSessionIdAndCreator(chatRoomEntity.getSessionId(), userEntity.getNickName());
+                chatRoomInVo.setRequiredRoomInfo(chatRoomEntity.getSessionId(), userEntity.getNickName(), chatRoomEntity.getCreateDate(), chatRoomEntity.getUpdateDate());
                 redisUtils.createChatRoomJob(chatRoomEntity.getSessionId(), chatRoomInVo, openViduRoom);
                 return true;
             } catch (Exception e){
@@ -190,11 +198,11 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     public Boolean checkRoomPassword(String sessionId, String pwd) throws BadRequestException {
-        ChatRoomOutVo chatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomOutVo.class);
-        if (Boolean.FALSE.equals(chatRoom.getUsePwd())) {
-            throw new BadRequestException("This room does not require a password");
+        ChatRoomInVo chatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomInVo.class);
+        if (Objects.isNull(pwd)) {
+            throw new BadRequestException("This room require a password");
         }
-        if (chatRoom.getPwd().equals(pwd)) {
+        if (!chatRoom.getPwd().equals(pwd)) {
             throw new BadRequestException("Invalid password");
         }
         return true;
@@ -202,30 +210,29 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     @Transactional
-    public ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo chatRoomInVo, JwtPayload jwtPayload) throws BadRequestException {
+    public ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo newChatRoomInVo, JwtPayload jwtPayload) throws BadRequestException {
         ChatRoom chatRoomEntity = chatRoomRepository.findChatRoomBySessionId(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Can not find ChatRoom"));
 
-        ChatRoom newChatRoomEntity = ChatRoom.ofUpdate(chatRoomEntity, chatRoomInVo);
+        ChatRoom newChatRoomEntity = ChatRoom.ofUpdate(chatRoomEntity, newChatRoomInVo);
         chatRoomRepository.saveAndFlush(newChatRoomEntity);
 
-        ChatRoomOutVo redisChatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomOutVo.class);
+        ChatRoomInVo redisChatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomInVo.class);
         if (!Objects.equals(redisChatRoom.getUserIdx(), jwtPayload.getIdx())) {
             throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
         }
 
-        int currentUserCount = redisUtils.getUserCount(sessionId);
-        ChatRoomOutVo chatRoomOutVo = ChatRoomOutVo.of(newChatRoomEntity, currentUserCount);
-        redisUtils.setObjectOpsHash(sessionId, DataType.CHATROOM, chatRoomOutVo);
+        ChatRoomInVo chatRoomInVo = ChatRoomInVo.ofUpdate(redisChatRoom, newChatRoomInVo);
+        redisUtils.setObjectOpsHash(sessionId, DataType.CHATROOM, chatRoomInVo);
 
-        return chatRoomOutVo;
+        return ChatRoomOutVo.of(chatRoomInVo);
     }
 
     @Override
     @Transactional
     public boolean deleteChatRoom(String sessionId, JwtPayload jwtPayload, boolean isSystem) throws BadRequestException {
         if (!isSystem) {
-            ChatRoomOutVo redisChatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomOutVo.class);
+            ChatRoomInVo redisChatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomInVo.class);
             if (!Objects.equals(redisChatRoom.getUserIdx(), jwtPayload.getIdx())) {
                 throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
             }

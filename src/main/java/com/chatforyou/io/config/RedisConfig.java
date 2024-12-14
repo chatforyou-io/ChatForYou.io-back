@@ -162,7 +162,7 @@ public class RedisConfig {
                 .addField(new TextField("sessionId"))
                 .addField(new TextField("creator").noStem())
                 .addField(new TextField("roomName").noStem())
-                .addField(new Field("currentTime", FieldType.NUMERIC));
+                .addField(new Field("createDate", FieldType.NUMERIC));
 
         // User 인덱스 스키마 정의
         Schema userSchema = new Schema()

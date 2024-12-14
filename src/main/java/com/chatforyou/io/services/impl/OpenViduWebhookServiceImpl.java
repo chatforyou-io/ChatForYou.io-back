@@ -65,18 +65,6 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
         User leftUser = userRepository.findUserByIdx(userIdx)
                 .orElseThrow(() -> new EntityNotFoundException("Can not find User"));
 
-        // redis 에서 유저 connection token 정보 삭제
-        ThreadUtils.runTask(() -> {
-            try{
-                redisUtils.deleteConnectionTokens(sessionId, String.valueOf(userIdx));
-                return true;
-            } catch (Exception e){
-                log.error("Unknown Internal Server Error occurred :: {} :: {}", e.getMessage(), e);
-                return false;
-            }
-                },10, 100, "Delete Participant Connection " + DataType.CONNECTION_CAMERA.toString()
-        );
-
         Map<String, ConnectionOutVo> updatedConnections = openViduDto.getSession().getConnections();
         updatedConnections.remove("con_camera_"+userIdx);
         updatedConnections.remove("con_screen_"+userIdx);
@@ -89,15 +77,12 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
                 .session(SessionOutVo.of(openViduDto.getSession(), updatedConnections))
                 .build();
 
-        ThreadUtils.runTask(() -> {
-            try {
-                redisUtils.leftUserJob(sessionId, updatedOpenViduData, UserOutVo.of(leftUser, false));
-                return true;
-            } catch (Exception e) {
-                log.error("Unknown Exception :: {} : {}", e.getMessage(), e);
-                return false;
-            }
-        }, 10, 100, "Left User");
+        // redis 에서 유저 connection token 및 방에서 유저 삭제
+        redisUtils.deleteConnectionTokens(sessionId, String.valueOf(userIdx));
+        redisUtils.leftUserJob(sessionId, updatedOpenViduData, UserOutVo.of(leftUser, false));
+
+        log.info("Delete Participant Connection success");
+        log.info("Left User success");
 
     }
 }
