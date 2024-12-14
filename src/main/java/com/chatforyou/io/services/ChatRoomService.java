@@ -15,10 +15,10 @@ public interface ChatRoomService {
     ChatRoomOutVo createChatRoom(ChatRoomInVo chatRoomInVo, JwtPayload jwtPayload) throws BadRequestException;
     OpenViduDto getOpenviduDataBySessionId(String sessionId) throws BadRequestException;
     List<ChatRoomOutVo> getChatRoomList(String keyword, int pageNum, int pageSize) throws BadRequestException;
-    Map<String, Object> joinChatRoom(String sessionId, Long userIdx) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException;
+    Map<String, Object> joinChatRoom(String sessionId, Long userIdx, JwtPayload jwtPayload) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException;
     Map<String, Object> getConnectionInfo(String sessionId, Long userId);
     ChatRoomOutVo findChatRoomBySessionId(String sessionId) throws BadRequestException;
     Boolean checkRoomPassword(String sessionId, String pwd) throws BadRequestException;
-    ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo chatRoomInVo) throws BadRequestException;
-    boolean deleteChatRoom(String sessionId) throws OpenViduJavaClientException, OpenViduHttpException;
+    ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo chatRoomInVo, JwtPayload jwtPayload) throws BadRequestException;
+    boolean deleteChatRoom(String sessionId, JwtPayload jwtPayload, boolean isSystem) throws OpenViduJavaClientException, OpenViduHttpException;
 }

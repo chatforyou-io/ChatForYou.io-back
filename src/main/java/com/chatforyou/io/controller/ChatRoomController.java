@@ -77,9 +77,9 @@ public class ChatRoomController {
             @RequestHeader("Authorization") String bearerToken,
             @PathVariable("sessionId") String sessionId,
             @RequestBody ChatRoomInVo chatRoomInVo) throws BadRequestException {
-        jwtService.verifyAccessToken(bearerToken);
+        JwtPayload payload = jwtService.verifyAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
-        ChatRoomOutVo chatRoom = chatRoomService.updateChatRoom(sessionId, chatRoomInVo);
+        ChatRoomOutVo chatRoom = chatRoomService.updateChatRoom(sessionId, chatRoomInVo, payload);
         response.put("result", "success");
         response.put("roomData", chatRoom);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -98,9 +98,9 @@ public class ChatRoomController {
     public ResponseEntity<Map<String, Object>> deleteChatRoom(
             @RequestHeader("Authorization") String bearerToken,
             @PathVariable("sessionId") String sessionId) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
-        jwtService.verifyAccessToken(bearerToken);
+        JwtPayload payload = jwtService.verifyAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
-        response.put("result", chatRoomService.deleteChatRoom(sessionId) ? "success" : "Fail Delete ChatRoom");
+        response.put("result", chatRoomService.deleteChatRoom(sessionId, payload, false) ? "success" : "Fail Delete ChatRoom");
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -180,10 +180,10 @@ public class ChatRoomController {
             @RequestHeader("Authorization") String bearerToken,
             @PathVariable("sessionId") String sessionId,
             @RequestParam("user_idx") String userIdx) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException {
-        jwtService.verifyAccessToken(bearerToken);
+        JwtPayload payload = jwtService.verifyAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
-        response.put("joinData", chatRoomService.joinChatRoom(sessionId, Long.parseLong(userIdx)));
+        response.put("joinData", chatRoomService.joinChatRoom(sessionId, Long.parseLong(userIdx), payload));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

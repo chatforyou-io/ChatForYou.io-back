@@ -4,6 +4,7 @@ import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.DataType;
+import com.chatforyou.io.models.JwtPayload;
 import com.chatforyou.io.models.OpenViduDto;
 import com.chatforyou.io.models.OpenViduWebhookData;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
@@ -54,10 +55,9 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
                 processParticipantLeftEvent(userIdx, sessionId, openViduDto);
                 break;
             case SESSION_DESTROYED: // session 삭제
-                chatRoomService.deleteChatRoom(sessionId);
+                chatRoomService.deleteChatRoom(sessionId, JwtPayload.builder().build(), true);
                 break;
         }
-
     }
 
     private void processParticipantLeftEvent(Long userIdx, String sessionId, OpenViduDto openViduDto) {
