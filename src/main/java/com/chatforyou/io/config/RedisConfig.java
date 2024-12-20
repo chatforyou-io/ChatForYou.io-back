@@ -173,7 +173,7 @@ public class RedisConfig {
         // 인덱스 생성 (존재하지 않을 경우에만 생성)
         try {
             redisSearchClient.getRediSearch("chatRoomIndex").createIndex(chatRoomSchema);
-//            redisSearchClient.getRediSearch("userIndex").createIndex(userSchema);
+            redisSearchClient.getRediSearch("userIndex").createIndex(userSchema);
             log.info("##### Successfully create Index #####");
         } catch (Exception e) {
             log.error("#### Fail to create Index, Maybe alreay Exist #####");

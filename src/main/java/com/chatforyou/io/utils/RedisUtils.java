@@ -421,7 +421,7 @@ public class RedisUtils {
                 }
                 searchOptions = new SearchOptions()
                         .page(pageNum * pageSize, pageSize)  // 페이지 설정
-                        .returnFields("user")
+                        .returnFields(DataType.LOGIN_USER.getType())
                         .sort(new SortBy("userId", SortOrder.DESC));  // userId 기준 내림차순 정렬
                 break;
         }
