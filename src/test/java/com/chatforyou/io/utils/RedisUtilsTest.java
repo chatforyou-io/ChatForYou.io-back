@@ -1,11 +1,9 @@
 package com.chatforyou.io.utils;
 
 import com.chatforyou.io.models.DataType;
-import com.chatforyou.io.models.SearchType;
+import com.chatforyou.io.models.RedisIndex;
 import com.chatforyou.io.models.out.UserOutVo;
-import io.github.dengliming.redismodule.redisearch.RediSearch;
 import io.github.dengliming.redismodule.redisearch.index.Document;
-import io.github.dengliming.redismodule.redisearch.search.SearchOptions;
 import org.apache.coyote.BadRequestException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -56,7 +53,7 @@ class RedisUtilsTest {
     @Test
     @DisplayName("레디스 특정 유저 검색")
     void searchLoginUserByKeyword() throws BadRequestException {
-        List<Document> documents = redisUtils.searchByKeyword(SearchType.LOGIN_USER, "id", 0, 20);
+        List<Document> documents = redisUtils.searchByKeyword(RedisIndex.LOGIN_USER, "id", 0, 20);
 
         logger.info("result :: {}", documents);
     }

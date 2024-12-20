@@ -3,15 +3,15 @@ package com.chatforyou.io.models;
 import lombok.Getter;
 
 @Getter
-public enum SearchType {
+public enum RedisIndex {
     CHATROOM(1, "chatRoomIndex"),
     LOGIN_USER(2, "userIndex")
     ;
 
-    SearchType(int code, String indexName){
+    RedisIndex(int code, String type){
         this.code = code;
-        this.indexName = indexName;
+        this.type = type;
     }
     private final int code;
-    private final String indexName;
+    private final String type;
 }

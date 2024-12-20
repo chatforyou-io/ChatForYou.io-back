@@ -3,7 +3,7 @@ package com.chatforyou.io.utils;
 import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.models.DataType;
 import com.chatforyou.io.models.OpenViduDto;
-import com.chatforyou.io.models.SearchType;
+import com.chatforyou.io.models.RedisIndex;
 import com.chatforyou.io.models.in.ChatRoomInVo;
 import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
@@ -27,8 +27,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.Time;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -391,9 +389,9 @@ public class RedisUtils {
         return favoriteRooms;
     }
 
-    public List<Document> searchByKeyword(SearchType searchType, String keyword, int pageNum, int pageSize) {
+    public List<Document> searchByKeyword(RedisIndex redisIndex, String keyword, int pageNum, int pageSize) {
         // searchType 에 맞춰 indexName 을 가져옴
-        RediSearch rediSearch = rediSearchClient.getRediSearch(searchType.getIndexName());
+        RediSearch rediSearch = rediSearchClient.getRediSearch(redisIndex.getType());
 
         // Redis 검색 결과에서 openvidu 필드의 JSON 문자열 가져오기
 //        int pageNumber = 0;  // 원하는 페이지 번호
@@ -401,7 +399,7 @@ public class RedisUtils {
         String queryParam = "*";
         SearchOptions searchOptions = null;
         // or 조건이 제대로 동작하려면 조건과 조건을 () 로 구분해서 묶어야함
-        switch (searchType) {
+        switch (redisIndex) {
             case CHATROOM:
                 if (!StringUtil.isNullOrEmpty(keyword)) {
                     // 검색어가 있을 때: creator 또는 roomName 필드 검색, 그리고 user: 값 제외
@@ -436,7 +434,7 @@ public class RedisUtils {
 
     public boolean searchDuplicateRoomName(String keyword) {
         // searchType 에 맞춰 indexName 을 가져옴
-        RediSearch rediSearch = rediSearchClient.getRediSearch(SearchType.CHATROOM.getIndexName());
+        RediSearch rediSearch = rediSearchClient.getRediSearch(RedisIndex.CHATROOM.getType());
 
         SearchOptions searchOptions = new SearchOptions()
                 .returnFields("roomName");  // sessionId 필드만 반환
