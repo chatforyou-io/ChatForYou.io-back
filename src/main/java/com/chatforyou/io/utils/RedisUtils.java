@@ -456,7 +456,7 @@ public class RedisUtils {
         masterTemplate.opsForHash().put(redisKey, DataType.LOGIN_USER.getType(), user);
         masterTemplate.opsForHash().put(redisKey, "userId", user.getId());
         masterTemplate.opsForHash().put(redisKey, "nickName", user.getNickName());
-        // 유저 유효시간 1일 설정
+        // 유저 데이터 유효시간 1일 설정
         masterTemplate.expire(redisKey, 1, TimeUnit.DAYS);
     }
 
@@ -467,6 +467,8 @@ public class RedisUtils {
         masterTemplate.opsForHash().put(redisKey, DataType.USER_REFRESH_TOKEN.getType(), refreshToken);
         // refresh-token 을 갱신할때마다 시간 update
         masterTemplate.opsForHash().put(redisKey, "token_update_time", new Date().getTime());
+        // 유저 데이터 유효시간 업데이트
+        masterTemplate.expire(redisKey, 1, TimeUnit.DAYS);
     }
 
     public void deleteLoginUser(Long userIdx) {
