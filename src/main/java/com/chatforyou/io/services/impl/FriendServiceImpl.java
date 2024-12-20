@@ -7,6 +7,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +21,8 @@ public class FriendServiceImpl implements FriendService {
     public List<User> getFriendLists(String id) {
         User user = userRepository.findUserById(id)
                 .orElseThrow(() -> new EntityNotFoundException("can not find user"));
-        return userRepository.friendListByUserIdx(user.getIdx());
+        // TODO 친구 기능 사용 시 개발 필요
+//        return userRepository.friendListByUserIdx(user.getIdx());
+        return Collections.emptyList();
     }
 }

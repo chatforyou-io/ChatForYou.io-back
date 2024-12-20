@@ -40,6 +40,7 @@ public class RedisUtils {
     private final RedisTemplate<String, Object> slaveTemplate;
     private final ObjectMapper objectMapper;
     private final RediSearchClient rediSearchClient;
+    private final long REDIS_TIMEOUT = 1L;
 
     public RedisUtils(
             @Qualifier("masterRedisTemplate") RedisTemplate<String, Object> masterTemplate,
@@ -454,8 +455,6 @@ public class RedisUtils {
         masterTemplate.opsForHash().put(redisKey, DataType.LOGIN_USER.getType(), user);
         masterTemplate.opsForHash().put(redisKey, "userId", user.getId());
         masterTemplate.opsForHash().put(redisKey, "nickName", user.getNickName());
-        // 유저 데이터 유효시간 1일 설정
-        masterTemplate.expire(redisKey, 1, TimeUnit.DAYS);
     }
 
     public void saveRefreshToken(Long userIdx, String refreshToken) {
@@ -463,10 +462,15 @@ public class RedisUtils {
         String redisKey = "user:" + userIdx;
         // index = userId && nickName
         masterTemplate.opsForHash().put(redisKey, DataType.USER_REFRESH_TOKEN.getType(), refreshToken);
+    }
+
+    public void updateExpiredDate(Long userIdx){
+        // redisKey = user:userIdx
+        String redisKey = "user:" + userIdx;
         // refresh-token 을 갱신할때마다 시간 update
         masterTemplate.opsForHash().put(redisKey, "token_update_time", new Date().getTime());
         // 유저 데이터 유효시간 업데이트
-        masterTemplate.expire(redisKey, 1, TimeUnit.DAYS);
+        masterTemplate.expire(redisKey, REDIS_TIMEOUT, TimeUnit.DAYS);
     }
 
     public void deleteLoginUser(Long userIdx) {
@@ -476,21 +480,33 @@ public class RedisUtils {
 
     public void deleteInactiveUsers() {
         Set<String> userKeys = slaveTemplate.keys("user:*");
-        long currentTime = new Date().getTime(); // System.currentTimeMillis();
+        long currentTime = System.currentTimeMillis();
         long inactivityThreshold = 3 * 60 * 60 * 1000; // 3시간 (밀리초)
 
         if (!CollectionUtils.isEmpty(userKeys)) {
-            for (String key : userKeys) {
-                // 1. 토큰 마지막 갱신시간 확인 및 ttl 값 확인
-                Long lastUpdateTime = (Long) masterTemplate.opsForHash().get(key, "token_update_time"); //  토큰 갱신 시간 확인
-                Long ttl = masterTemplate.getExpire(key); // TTL 값 확인
+            // 삭제할 키를 필터링
+            Set<String> deleteKeys = userKeys.stream()
+                    .filter(key -> {
+                        try {
+                            // 토큰 마지막 갱신시간 확인 및 TTL 값 확인
+                            Long lastUpdateTime = (Long) masterTemplate.opsForHash().get(key, "token_update_time");
+                            Long ttl = masterTemplate.getExpire(key);
 
-                // 2. token_update_time 값이 없거나 || 시간이 만료되었거나 || ttl 이 만료된 경우 유저 강제 로그아웃
-                if ((lastUpdateTime == null) ||
-                        (currentTime - lastUpdateTime >= inactivityThreshold) ||
-                        (ttl != null && ttl <= 0)) {
-                    masterTemplate.delete(key);
-                }
+                            // 삭제 조건 확인
+                            return (lastUpdateTime == null) ||
+                                    (currentTime - lastUpdateTime >= inactivityThreshold) ||
+                                    (ttl != null && ttl <= 0);
+                        } catch (Exception e) {
+                            // 예외 발생 시 로그 출력 및 키 삭제 대상으로 포함
+                            log.error("키 확인 중 오류 발생: " + key + " - " + e.getMessage());
+                            return true;
+                        }
+                    })
+                    .collect(Collectors.toSet());
+
+            // 삭제할 키가 존재하면 한 번에 삭제
+            if (!deleteKeys.isEmpty()) {
+                masterTemplate.delete(deleteKeys);
             }
         }
     }
