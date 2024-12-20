@@ -32,6 +32,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT CASE WHEN COUNT(u) > 0 THEN TRUE ELSE FALSE END FROM User u WHERE u.id = :id")
     boolean checkExistsById(@Param("id") String id);
 
-    @Query("SELECT u from User u join Friend f on u.idx = f.friendIdx where f.userIdx=:idx")
-    List<User> friendListByUserIdx(Long idx);
+//    @Query("SELECT u from User u join Friend f on u.idx = f.friendIdx where f.userIdx=:idx")
+//    List<User> friendListByUserIdx(Long idx);
 }
