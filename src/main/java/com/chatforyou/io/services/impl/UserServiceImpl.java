@@ -2,6 +2,7 @@ package com.chatforyou.io.services.impl;
 
 import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.entity.User;
+import com.chatforyou.io.models.DataType;
 import com.chatforyou.io.models.SearchType;
 import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.models.in.UserInVo;
@@ -116,9 +117,9 @@ public class UserServiceImpl implements UserService {
     public List<UserOutVo> getUserList(String keyword, int pageNum, int pageSize) {
         List<UserOutVo> userList = new ArrayList<>();
         pageNum = pageNum !=0 ? pageNum - 1 : pageNum;
-        List<Document> documents = redisUtils.searchByKeyword(SearchType.LOGIN_USER, keyword, pageNum, pageSize);
-        for (Document document : documents) {
-            Object loginUser = document.getFields().get("login_user");
+            List<Document> documents = redisUtils.searchByKeyword(SearchType.LOGIN_USER, keyword, pageNum, pageSize);
+            for (Document document : documents) {
+                Object loginUser = document.getFields().get(DataType.LOGIN_USER.getType());
             if (Objects.isNull(loginUser)) {
                 continue;
             }
