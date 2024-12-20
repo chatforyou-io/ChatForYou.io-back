@@ -1,11 +1,11 @@
 package com.chatforyou.io.config;
 
 import ch.qos.logback.core.util.StringUtil;
+import com.chatforyou.io.models.RedisIndex;
 import io.github.dengliming.redismodule.redisearch.index.schema.Field;
 import io.github.dengliming.redismodule.redisearch.index.schema.FieldType;
 import io.github.dengliming.redismodule.redisearch.index.schema.Schema;
 import io.github.dengliming.redismodule.redisearch.index.schema.TextField;
-import io.lettuce.core.RedisClient;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.config.Config;
@@ -172,11 +172,11 @@ public class RedisConfig {
 
         // 인덱스 생성 (존재하지 않을 경우에만 생성)
         try {
-            redisSearchClient.getRediSearch("chatRoomIndex").createIndex(chatRoomSchema);
-            redisSearchClient.getRediSearch("userIndex").createIndex(userSchema);
+            redisSearchClient.getRediSearch(RedisIndex.CHATROOM.getType()).createIndex(chatRoomSchema);
+            redisSearchClient.getRediSearch(RedisIndex.LOGIN_USER.getType()).createIndex(userSchema);
             log.info("##### Successfully create Index #####");
         } catch (Exception e) {
-            log.error("#### Fail to create Index, Maybe alreay Exist #####");
+            log.error("#### Fail to create Index, Maybe already Exist #####");
             log.error("Exception: {} :: {}", e.getMessage(), e);
 
         }

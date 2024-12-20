@@ -3,7 +3,6 @@ package com.chatforyou.io.services.impl;
 import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
-import com.chatforyou.io.controller.ExceptionController;
 import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.*;
@@ -20,13 +19,11 @@ import com.chatforyou.io.utils.RedisUtils;
 import com.chatforyou.io.utils.ThreadUtils;
 import io.github.dengliming.redismodule.redisearch.index.Document;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -95,7 +92,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     public List<ChatRoomOutVo> getChatRoomList(String keyword, int pageNum, int pageSize) throws BadRequestException {
         List<ChatRoomOutVo> chatRoomList = new ArrayList<>();
         pageNum = pageNum !=0 ? pageNum - 1 : pageNum;
-        List<Document> roomList = redisUtils.searchByKeyword(SearchType.CHATROOM, keyword, pageNum, pageSize);
+        List<Document> roomList = redisUtils.searchByKeyword(RedisIndex.CHATROOM, keyword, pageNum, pageSize);
         for (Document document : roomList) {
             if (document.getFields().get("sessionId") == null) {
                 continue;

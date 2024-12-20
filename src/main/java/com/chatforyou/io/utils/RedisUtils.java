@@ -3,9 +3,8 @@ package com.chatforyou.io.utils;
 import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.models.DataType;
 import com.chatforyou.io.models.OpenViduDto;
-import com.chatforyou.io.models.SearchType;
+import com.chatforyou.io.models.RedisIndex;
 import com.chatforyou.io.models.in.ChatRoomInVo;
-import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -14,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.dengliming.redismodule.redisearch.RediSearch;
 import io.github.dengliming.redismodule.redisearch.client.RediSearchClient;
 import io.github.dengliming.redismodule.redisearch.index.Document;
-import io.github.dengliming.redismodule.redisearch.search.Filter;
 import io.github.dengliming.redismodule.redisearch.search.SearchOptions;
 import io.github.dengliming.redismodule.redisearch.search.SortBy;
 import io.lettuce.core.RedisException;
@@ -306,7 +304,6 @@ public class RedisUtils {
 
     public <T> T getRedisDataByDataType(String key, DataType dataType, Class<T> clazz) throws BadRequestException {
         String redisKey = "";
-        // TODO 로그인한 유저를 조회하기 위한 코드
         if (DataType.LOGIN_USER.equals(dataType) || DataType.USER_REFRESH_TOKEN.equals(dataType)) {
             redisKey = key.contains("user:") ? key : "user:" + key;
         } else {
@@ -392,9 +389,9 @@ public class RedisUtils {
         return favoriteRooms;
     }
 
-    public List<Document> searchByKeyword(SearchType searchType, String keyword, int pageNum, int pageSize) {
+    public List<Document> searchByKeyword(RedisIndex redisIndex, String keyword, int pageNum, int pageSize) {
         // searchType 에 맞춰 indexName 을 가져옴
-        RediSearch rediSearch = rediSearchClient.getRediSearch(searchType.getIndexName());
+        RediSearch rediSearch = rediSearchClient.getRediSearch(redisIndex.getType());
 
         // Redis 검색 결과에서 openvidu 필드의 JSON 문자열 가져오기
 //        int pageNumber = 0;  // 원하는 페이지 번호
@@ -402,7 +399,7 @@ public class RedisUtils {
         String queryParam = "*";
         SearchOptions searchOptions = null;
         // or 조건이 제대로 동작하려면 조건과 조건을 () 로 구분해서 묶어야함
-        switch (searchType) {
+        switch (redisIndex) {
             case CHATROOM:
                 if (!StringUtil.isNullOrEmpty(keyword)) {
                     // 검색어가 있을 때: creator 또는 roomName 필드 검색, 그리고 user: 값 제외
@@ -437,7 +434,7 @@ public class RedisUtils {
 
     public boolean searchDuplicateRoomName(String keyword) {
         // searchType 에 맞춰 indexName 을 가져옴
-        RediSearch rediSearch = rediSearchClient.getRediSearch(SearchType.CHATROOM.getIndexName());
+        RediSearch rediSearch = rediSearchClient.getRediSearch(RedisIndex.CHATROOM.getType());
 
         SearchOptions searchOptions = new SearchOptions()
                 .returnFields("roomName");  // sessionId 필드만 반환
@@ -457,6 +454,8 @@ public class RedisUtils {
         masterTemplate.opsForHash().put(redisKey, DataType.LOGIN_USER.getType(), user);
         masterTemplate.opsForHash().put(redisKey, "userId", user.getId());
         masterTemplate.opsForHash().put(redisKey, "nickName", user.getNickName());
+        // 유저 데이터 유효시간 1일 설정
+        masterTemplate.expire(redisKey, 1, TimeUnit.DAYS);
     }
 
     public void saveRefreshToken(Long userIdx, String refreshToken) {
@@ -464,11 +463,35 @@ public class RedisUtils {
         String redisKey = "user:" + userIdx;
         // index = userId && nickName
         masterTemplate.opsForHash().put(redisKey, DataType.USER_REFRESH_TOKEN.getType(), refreshToken);
+        // refresh-token 을 갱신할때마다 시간 update
+        masterTemplate.opsForHash().put(redisKey, "token_update_time", new Date().getTime());
+        // 유저 데이터 유효시간 업데이트
+        masterTemplate.expire(redisKey, 1, TimeUnit.DAYS);
     }
 
     public void deleteLoginUser(Long userIdx) {
-        String redisKey = "user:" +userIdx;
+        String redisKey = "user:" + userIdx;
         masterTemplate.delete(redisKey);
     }
 
+    public void deleteInactiveUsers() {
+        Set<String> userKeys = slaveTemplate.keys("user:*");
+        long currentTime = new Date().getTime(); // System.currentTimeMillis();
+        long inactivityThreshold = 3 * 60 * 60 * 1000; // 3시간 (밀리초)
+
+        if (!CollectionUtils.isEmpty(userKeys)) {
+            for (String key : userKeys) {
+                // 1. 토큰 마지막 갱신시간 확인 및 ttl 값 확인
+                Long lastUpdateTime = (Long) masterTemplate.opsForHash().get(key, "token_update_time"); //  토큰 갱신 시간 확인
+                Long ttl = masterTemplate.getExpire(key); // TTL 값 확인
+
+                // 2. token_update_time 값이 없거나 || 시간이 만료되었거나 || ttl 이 만료된 경우 유저 강제 로그아웃
+                if ((lastUpdateTime == null) ||
+                        (currentTime - lastUpdateTime >= inactivityThreshold) ||
+                        (ttl != null && ttl <= 0)) {
+                    masterTemplate.delete(key);
+                }
+            }
+        }
+    }
 }
