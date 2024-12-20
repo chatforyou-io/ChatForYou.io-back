@@ -150,6 +150,8 @@ public class AuthServiceImpl implements AuthService {
 		ThreadUtils.runTask(()->{
 			try {
 				redisUtils.saveLoginUser(user);
+				// 유저 데이터 유효시간 업데이트
+				redisUtils.updateExpiredDate(user.getIdx());
 				return true;
 			} catch (Exception e) {
 				return false;

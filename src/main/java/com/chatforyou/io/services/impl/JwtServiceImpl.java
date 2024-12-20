@@ -166,6 +166,8 @@ public class JwtServiceImpl implements JwtService {
         JwtPayload payload = this.verifyRefreshToken(userIdx, refreshToken);
         result.put("accessToken", this.createAccessToken(payload));
         result.put("refreshToken", this.createRefreshToken(payload));
+        // 유저 데이터 유효시간 업데이트
+        redisUtils.updateExpiredDate(userIdx);
         return result;
     }
 
