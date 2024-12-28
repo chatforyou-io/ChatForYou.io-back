@@ -1,0 +1,49 @@
+# Gradle 캐시 디렉토리 제외
+.gradle/
+
+# 로컬 빌드 결과 제외
+build/
+!build/libs/*.jar  # 빌드된 JAR 파일은 포함
+
+# IDE 설정 파일 제외
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+
+# Maven, NetBeans 관련 파일 제외
+/nbproject/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# 로그 및 임시 파일 제외
+*.log
+*.tmp
+*.ctxt
+hs_err_pid*
+
+# 애플리케이션 설정 파일 포함
+!src/main/resources/application.properties
+
+# 프로젝트 문서 제외
+HELP.md
+
+# Git 정보 제외
+.git/
+.gitignore
+
+# OS 및 편집기 관련 파일 제외
+.DS_Store
+Thumbs.db
+
+# Dockerfile 및 Docker 관련 파일은 항상 포함
+!Dockerfile
+!docker-compose.yml
+
+# Gradle Wrapper 파일 포함
+!gradlew
+!gradlew.bat
+!gradle/wrapper/gradle-wrapper.jar
