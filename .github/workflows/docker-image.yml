@@ -15,6 +15,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # 2. application.properties 생성
+    - name: Create application.properties
+      run: |
+        echo "${{ secrets.CHATFORYOU_PROPERTIES }}" > src/main/resources/application.properties
+
     # 3. Docker 이미지 빌드
     - name: Build Docker Image
       run: |
