@@ -52,4 +52,4 @@ EXPOSE 8443
 COPY --from=builder /workspace/app/build/libs/*.jar app.jar
 
 # 애플리케이션 실행
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar", "--spring.config.location=/config/application.properties"]
