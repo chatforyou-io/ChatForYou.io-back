@@ -18,9 +18,9 @@ jobs:
     # 3. Docker 이미지 빌드
     - name: Build Docker Image
       run: |
-        docker build --file Dockerfile -t hjproject.kro.kr/chatforyou:chatforyou-${{ github.sha }} .
+        docker build --file Dockerfile -t hjproject.kro.kr/chatforyou/chatforyou:${{ github.sha }} .
     
     # 4. Docker 이미지 푸시
     - name: Push Docker Image
       run: |
-        docker push hjproject.kro.kr/chatforyou:chatforyou-${{ github.sha }}
+        docker push hjproject.kro.kr/chatforyou/chatforyou:${{ github.sha }}
