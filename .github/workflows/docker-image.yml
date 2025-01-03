@@ -15,17 +15,32 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. application.properties 생성
-    - name: Create application.properties
+      # 2. 현재 시간 기반 이미지 태그 생성
+    - name: Generate timestamp tag
+      id: tag
       run: |
-        echo "${{ secrets.CHATFORYOU_PROPERTIES }}" > src/main/resources/application.properties
+        echo "TAG=$(date '+%Y%m%d%H%M')" >> $GITHUB_ENV
 
-    # 3. Docker 이미지 빌드
+      # 3. Docker 이미지 빌드
     - name: Build Docker Image
       run: |
-        docker build --file Dockerfile -t hjproject.kro.kr/chatforyou/chatforyou:${{ github.sha }} .
-    
-    # 4. Docker 이미지 푸시
+        docker build --file Dockerfile -t hjproject.kro.kr/chatforyou/chatforyou:${{ env.TAG }} .
+
+      # 4. Docker 이미지 푸시
     - name: Push Docker Image
       run: |
-        docker push hjproject.kro.kr/chatforyou/chatforyou:${{ github.sha }}
+        docker push hjproject.kro.kr/chatforyou/chatforyou:${{ env.TAG }}
+
+      # 5. Kubernetes Kubeconfig 설정
+    - name: Configure Kubeconfig
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > kubeconfig
+        export KUBECONFIG=$PWD/kubeconfig
+
+      # 6. Kubernetes 배포
+    - name: Deploy to Kubernetes
+      run: |
+        kubectl set image deployment/chatforyou-io \
+          chatforyou-container=hjproject.kro.kr/chatforyou/chatforyou:${{ env.TAG }} \
+          -n chatforyou-io
+        kubectl rollout status deployment/chatforyou-io -n chatforyou-io
