@@ -15,15 +15,25 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. Decode KUBE_CONFIG_DATA and set Kubeconfig
+      # Debug: Check if KUBE_CONFIG_DATA is present
+    - name: Debug KUBE_CONFIG_DATA
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_DATA }}" | wc -c
+
+      # Configure Kubeconfig
     - name: Configure Kubeconfig
       run: |
         echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > kubeconfig
         export KUBECONFIG=$PWD/kubeconfig
 
-    # 3. Verify Kubernetes connection
+      # Debug: Check Decoded Kubeconfig
+    - name: Check Decoded Kubeconfig
+      run: |
+        cat kubeconfig
+
+      # Verify Kubernetes Connection
     - name: Verify Kubernetes Connection
-      run: kubectl get nodes
+      run: kubectl cluster-info
 
 #      # 2. 현재 시간 기반 이미지 태그 생성
 #    - name: Generate timestamp tag
