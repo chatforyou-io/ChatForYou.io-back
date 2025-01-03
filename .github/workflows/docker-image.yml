@@ -18,12 +18,13 @@ jobs:
       # Debug: Check if KUBE_CONFIG_DATA is present
     - name: Debug KUBE_CONFIG_DATA
       run: |
-        echo "${{ secrets.KUBE_CONFIG_DATA }}" | wc -c
+        echo "config val ::::::::: ${{ secrets.KUBE_CONFIG }}"
+        echo "secret length ::::::::::: ${{ secrets.KUBE_CONFIG }}" | wc -c
 
       # Configure Kubeconfig
     - name: Configure Kubeconfig
       run: |
-        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > kubeconfig
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
         export KUBECONFIG=$PWD/kubeconfig
 
       # Debug: Check Decoded Kubeconfig
