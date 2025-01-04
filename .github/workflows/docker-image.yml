@@ -20,19 +20,9 @@ jobs:
         run: |
           mkdir -p ${HOME}/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > ${HOME}/.kube/config
-
-      - name: Debug kubeconfig
-        run: |
-          ls -l ${HOME}/.kube/
-          cat ${HOME}/.kube/config
-
-      - name: Use KUBE_CONFIG Environment Variable
-        env:
-          KUBE_CONFIG: ${{ vars.KUBE_CONFIG }}
-        run: |
-          echo "$KUBE_CONFIG" | base64 --decode > kubeconfig
-          cat kubeconfig
-
+          export KUBECONFIG=${HOME}/.kube/config
 
       - name: Test Kubernetes connection
-        run: kubectl cluster-info
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
