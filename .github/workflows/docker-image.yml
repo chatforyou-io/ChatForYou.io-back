@@ -30,22 +30,17 @@ jobs:
           echo "${KUBE_CONFIG}" | base64 --decode > ${HOME}/.kube/config
           export KUBECONFIG=${HOME}/.kube/config
 
-      # 3. Docker 로그인
-      - name: Login to Docker Registry
-        run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ secrets.DOCKER_REGISTRY_URL }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-
-      # 4. Docker 이미지 빌드 및 태그
+      # 3. Docker 이미지 빌드 및 태그
       - name: Build Docker Image
         run: |
           docker build --file Dockerfile -t $IMAGE_REPO:$TIMESTAMP .
 
-      # 5. Docker 이미지 푸시
+      # 4. Docker 이미지 푸시
       - name: Push Docker Image
         run: |
           docker push $IMAGE_REPO:$TIMESTAMP
 
-      # 6. Kubernetes 배포
+      # 5. Kubernetes 배포
       - name: Deploy to Kubernetes
         run: |
           kubectl set image deployment/$DEPLOYMENT_NAME \
