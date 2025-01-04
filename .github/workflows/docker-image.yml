@@ -29,15 +29,17 @@ jobs:
           echo "${KUBE_CONFIG}" | base64 --decode > ${HOME}/.kube/config
           export KUBECONFIG=${HOME}/.kube/config
 
-      # 3. TIMESTAMP 생성
-      - name: Generate TIMESTAMP
+      # 3. TIMESTAMP 생성 (한국 시간으로)
+      - name: Generate TIMESTAMP in KST
         id: timestamp
-        run: echo "TIMESTAMP=$(date '+%y%m%d%H%M%S')" >> $GITHUB_ENV
+        run: |
+          export TZ=Asia/Seoul
+          echo "TIMESTAMP=$(date -d "${{ github.event.head_commit.timestamp }}" '+%Y%m%d%H%M%S')" >> $GITHUB_ENV
 
-#      # 4. Docker 로그인
-#      - name: Login to Docker Registry
-#        run: |
-#          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ secrets.DOCKER_REGISTRY_URL }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+      #      # 4. Docker 로그인
+      #      - name: Login to Docker Registry
+      #        run: |
+      #          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ secrets.DOCKER_REGISTRY_URL }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
 
       # 5. Docker 이미지 빌드 및 태그
       - name: Build Docker Image
