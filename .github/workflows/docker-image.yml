@@ -13,8 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-      IMAGE_REPO: hjproject.kro.kr/chatforyou/chatforyou
-      TIMESTAMP: $(date -d "${{ github.event.head_commit.timestamp }}" '+%Y%m%d%H%M%S')
+      IMAGE_REPO: ${{ secrets.IMAGE_REPO }}
       K8S_NAMESPACE: chatforyou-io # Kubernetes 네임스페이스
       DEPLOYMENT_NAME: chatforyou-io # Deployment 이름
 
@@ -30,20 +29,30 @@ jobs:
           echo "${KUBE_CONFIG}" | base64 --decode > ${HOME}/.kube/config
           export KUBECONFIG=${HOME}/.kube/config
 
-      # 3. Docker 이미지 빌드 및 태그
+      # 3. TIMESTAMP 생성
+      - name: Generate TIMESTAMP
+        id: timestamp
+        run: echo "TIMESTAMP=$(date '+%y%m%d%H%M%S')" >> $GITHUB_ENV
+
+#      # 4. Docker 로그인
+#      - name: Login to Docker Registry
+#        run: |
+#          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ secrets.DOCKER_REGISTRY_URL }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      # 5. Docker 이미지 빌드 및 태그
       - name: Build Docker Image
         run: |
-          docker build --file Dockerfile -t $IMAGE_REPO:$TIMESTAMP .
+          docker build --file Dockerfile -t $IMAGE_REPO:${{ env.TIMESTAMP }} .
 
-      # 4. Docker 이미지 푸시
+      # 6. Docker 이미지 푸시
       - name: Push Docker Image
         run: |
-          docker push $IMAGE_REPO:$TIMESTAMP
+          docker push $IMAGE_REPO:${{ env.TIMESTAMP }}
 
-      # 5. Kubernetes 배포
+      # 7. Kubernetes 배포
       - name: Deploy to Kubernetes
         run: |
           kubectl set image deployment/$DEPLOYMENT_NAME \
-            chatforyou-container=$IMAGE_REPO:$TIMESTAMP \
+            chatforyou-container=$IMAGE_REPO:${{ env.TIMESTAMP }} \
             -n $K8S_NAMESPACE
           kubectl rollout status deployment/$DEPLOYMENT_NAME -n $K8S_NAMESPACE
