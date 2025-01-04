@@ -9,6 +9,8 @@ on:
 jobs:
   deploy:
     name: Deploy to Kubernetes
+    environment: chatforyou-back-env # 환경 지정
+
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
