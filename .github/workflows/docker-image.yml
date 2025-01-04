@@ -24,5 +24,13 @@ jobs:
           ls -l ${HOME}/.kube/
           cat ${HOME}/.kube/config
 
+      - name: Use KUBE_CONFIG Environment Variable
+        env:
+          KUBE_CONFIG: ${{ vars.KUBE_CONFIG }}
+        run: |
+          echo "$KUBE_CONFIG" | base64 --decode > kubeconfig
+          cat kubeconfig
+
+
       - name: Test Kubernetes connection
         run: kubectl cluster-info
