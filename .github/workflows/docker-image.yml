@@ -18,6 +18,7 @@ jobs:
       # Debug: Check if KUBE_CONFIG_DATA is present
     - name: Debug KUBE_CONFIG_DATA
       run: |
+        echo "config env val ::::::: ${{ env.KUBE_CONFIG }}"
         echo "config val ::::::::: ${{ secrets.KUBE_CONFIG }}"
         echo "secret length ::::::::::: ${{ secrets.KUBE_CONFIG }}" | wc -c
 
