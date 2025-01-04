@@ -2,41 +2,23 @@ name: Docker CI/CD
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "cicd-test" ]
   pull_request:
     branches: [ "master" ]
 
 jobs:
-  build-and-push:
+  deploy:
+    name: Deploy to Kubernetes
     runs-on: ubuntu-latest
-
     steps:
-    # 1. 코드 체크아웃
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      # Debug: Check if KUBE_CONFIG_DATA is present
-    - name: Debug KUBE_CONFIG_DATA
-      run: |
-        echo "config test ::::::::: ${{ secrets.CHATFORYOU_PROPERTIES }}"
-        echo "config env val ::::::: ${{ env.KUBE_CONFIG }}"
-        echo "config val ::::::::: ${{ secrets.KUBE_CONFIG }}"
-        echo "secret length ::::::::::: ${{ secrets.KUBE_CONFIG }}" | wc -c
-
-      # Configure Kubeconfig
-    - name: Configure Kubeconfig
-      run: |
-        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
-        export KUBECONFIG=$PWD/kubeconfig
-
-      # Debug: Check Decoded Kubeconfig
-    - name: Check Decoded Kubeconfig
-      run: |
-        cat kubeconfig
-
-      # Verify Kubernetes Connection
-    - name: Verify Kubernetes Connection
-      run: kubectl cluster-info
+      - name: Create kubeconfig
+        run: |
+          mkdir ${HOME}/.kube
+          echo ${{ secrets.KUBE_CONFIG }} | base64 --decode > ${HOME}/.kube/config
+          cat ${HOME}/.kube/config
 
 #      # 2. 현재 시간 기반 이미지 태그 생성
 #    - name: Generate timestamp tag
