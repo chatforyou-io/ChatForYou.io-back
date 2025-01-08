@@ -120,9 +120,13 @@ public class ChatRoomController {
             @RequestParam(value = "pageSize", required = false, defaultValue = "9") String pageSizeStr
     ) throws BadRequestException {
         Map<String, Object> response = new LinkedHashMap<>();
-        List<ChatRoomOutVo> chatRoomList = chatRoomService.getChatRoomList(keyword, Integer.parseInt(pageNumStr), Integer.parseInt(pageSizeStr));
+        int pageNum = Integer.parseInt(pageNumStr);
+        int pageSize = Integer.parseInt(pageSizeStr);
+        List<ChatRoomOutVo> chatRoomList = chatRoomService.getChatRoomList(keyword, pageNum, pageSize);
         response.put("result", "success");
-        response.put("count", chatRoomList.size());
+        response.put("pageNum", pageNum == 0 ? 1 : pageNum);
+        response.put("pageSize", pageSize);
+        response.put("totalCount", chatRoomList.size());
         response.put("roomList", chatRoomList);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

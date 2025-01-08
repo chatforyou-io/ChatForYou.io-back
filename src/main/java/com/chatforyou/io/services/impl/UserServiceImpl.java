@@ -1,5 +1,6 @@
 package com.chatforyou.io.services.impl;
 
+import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.DataType;
 import com.chatforyou.io.models.RedisIndex;
@@ -16,6 +17,9 @@ import io.github.dengliming.redismodule.redisearch.index.Document;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -111,7 +115,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserOutVo> getUserList(String keyword, int pageNum, int pageSize) {
+    public List<UserOutVo> getLoginUserList(String keyword, int pageNum, int pageSize) {
         List<UserOutVo> userList = new ArrayList<>();
         pageNum = pageNum !=0 ? pageNum - 1 : pageNum;
             List<Document> documents = redisUtils.searchByKeyword(RedisIndex.LOGIN_USER, keyword, pageNum, pageSize);
@@ -125,6 +129,26 @@ public class UserServiceImpl implements UserService {
         }
 
         return userList;
+    }
+
+    @Override
+    public List<UserOutVo> getUserList(String keyword, int pageNum, int pageSize) {
+        PageRequest pageRequest = PageRequest.of(pageNum, pageSize, Sort.by("nickName").ascending());
+        Page<User> userPage;
+        if (StringUtil.isNullOrEmpty(keyword)) {
+            userPage = userRepository.searchUserList(pageRequest);
+        } else {
+            userPage = userRepository.searchUserListByKeyword(keyword, pageRequest);
+        }
+
+        if (userPage.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return userPage.getContent()
+                .stream()
+                .map(user -> UserOutVo.of(user, false))
+                .toList();
     }
 
     @Override

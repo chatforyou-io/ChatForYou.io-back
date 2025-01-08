@@ -8,18 +8,22 @@ import com.chatforyou.io.services.UserService;
 import com.chatforyou.io.utils.AuthUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @Transactional
 class UserServiceImplTest {
-
+    Logger logger = LoggerFactory.getLogger(UserServiceImplTest.class);
     @Autowired
     private UserRepository repository;
 
@@ -65,5 +69,12 @@ class UserServiceImplTest {
         UserOutVo userOutVo = authService.getLoginUserInfo(id, passwd);
         System.out.println("userinfo ::: " + userOutVo.toString());
 
+    }
+
+    @Test
+    @DisplayName("전체 유저 리스트 확인")
+    void getUserList(){
+        List<UserOutVo> userList = userService.getUserList("sejon", 0, 20);
+        System.out.println("userlist ::: " + userList.toString());
     }
 }
