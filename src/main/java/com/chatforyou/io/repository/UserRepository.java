@@ -38,7 +38,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> searchUserListByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
     @Query("SELECT u FROM User u")
-    Page<User> searchUserList(@Param("keyword") String keyword, Pageable pageable);
+    Page<User> searchUserList(Pageable pageable);
 
 //    @Query("SELECT u from User u join Friend f on u.idx = f.friendIdx where f.userIdx=:idx")
 //    List<User> friendListByUserIdx(Long idx);

@@ -113,17 +113,8 @@ public class UserController {
             @RequestParam(value = "pageNum", required = false, defaultValue = "0") String pageNumStr,
             @RequestParam(value = "pageSize", required = false, defaultValue = "20") String pageSizeStr
     ) throws BadRequestException {
-        jwtService.verifyAccessToken(bearerToken);
-        Map<String, Object> response = new LinkedHashMap<>();
-        int pageNum = Integer.parseInt(pageNumStr);
-        int pageSize = Integer.parseInt(pageSizeStr);
-        List<UserOutVo> userList = userService.getLoginUserList(keyword, pageNum, pageSize);
-        response.put("result", "success");
-        response.put("totalCount", userList.size());
-        response.put("pageNum", pageNum == 0 ? 1 : pageNum);
-        response.put("pageSize", pageSize);
-        response.put("userList", userList);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return buildUserListResponse(bearerToken, keyword, pageNumStr, pageSizeStr,
+                userService::getLoginUserList);
     }
 
     /**
@@ -142,11 +133,43 @@ public class UserController {
             @RequestParam(value = "pageNum", required = false, defaultValue = "0") String pageNumStr,
             @RequestParam(value = "pageSize", required = false, defaultValue = "20") String pageSizeStr
     ) throws BadRequestException {
+        return buildUserListResponse(bearerToken, keyword, pageNumStr, pageSizeStr,
+                userService::getUserList);
+    }
+
+
+    /**
+     * 사용자 리스트를 조회하기 위한 함수형 인터페이스.
+     * keyword, pageNum, pageSize를 입력으로 받고, List<UserOutVo>를 반환
+     */
+    @FunctionalInterface
+    private interface UserListFunction {
+        List<UserOutVo> apply(String keyword, int pageNum, int pageSize);
+    }
+
+    /**
+     * UserList 조회에서 공통된 부분 추출
+     * @param bearerToken 유저 토큰
+     * @param keyword 검색 키워드
+     * @param pageNumStr 페이지 번호
+     * @param pageSizeStr 페이지 사이즈
+     * @param userListFunction 유저 리스트 조회 함수
+     * @return 조건에 따라 조회된 userList
+     * @throws BadRequestException 잘못된 요청일 경우 발생하는 예외
+     */
+    private ResponseEntity<Map<String, Object>> buildUserListResponse(
+            String bearerToken,
+            String keyword,
+            String pageNumStr,
+            String pageSizeStr,
+            UserListFunction userListFunction
+    ) throws BadRequestException {
         jwtService.verifyAccessToken(bearerToken);
-        Map<String, Object> response = new LinkedHashMap<>();
         int pageNum = Integer.parseInt(pageNumStr);
         int pageSize = Integer.parseInt(pageSizeStr);
-        List<UserOutVo> userList = userService.getUserList(keyword,  pageNum, pageSize);
+
+        List<UserOutVo> userList = userListFunction.apply(keyword, pageNum, pageSize);
+        Map<String, Object> response = new LinkedHashMap<>();
         response.put("result", "success");
         response.put("totalCount", userList.size());
         response.put("pageNum", pageNum == 0 ? 1 : pageNum);

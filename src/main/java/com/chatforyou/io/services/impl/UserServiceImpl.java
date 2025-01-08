@@ -136,7 +136,7 @@ public class UserServiceImpl implements UserService {
         PageRequest pageRequest = PageRequest.of(pageNum, pageSize, Sort.by("nickName").ascending());
         Page<User> userPage;
         if (StringUtil.isNullOrEmpty(keyword)) {
-            userPage = userRepository.searchUserList(keyword, pageRequest);
+            userPage = userRepository.searchUserList(pageRequest);
         } else {
             userPage = userRepository.searchUserListByKeyword(keyword, pageRequest);
         }
