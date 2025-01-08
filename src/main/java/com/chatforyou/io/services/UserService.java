@@ -1,12 +1,13 @@
 package com.chatforyou.io.services;
 
+import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.in.UserUpdateVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import org.apache.coyote.BadRequestException;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
-import java.util.Map;
 
 public interface UserService {
     UserOutVo findUserByIdx(Long idx);
@@ -16,6 +17,7 @@ public interface UserService {
     UserOutVo updateUserPwd(UserUpdateVo user) throws BadRequestException;
     boolean deleteUser(UserInVo userInVO) throws BadRequestException;
 
+    List<UserOutVo> getLoginUserList(String keyword, int pageNum, int pageSize);
     List<UserOutVo> getUserList(String keyword, int pageNum, int pageSize);
     void getFriendInfo();
 

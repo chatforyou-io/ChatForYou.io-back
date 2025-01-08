@@ -1,6 +1,8 @@
 package com.chatforyou.io.repository;
 
 import com.chatforyou.io.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -31,6 +33,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT CASE WHEN COUNT(u) > 0 THEN TRUE ELSE FALSE END FROM User u WHERE u.id = :id")
     boolean checkExistsById(@Param("id") String id);
+
+    @Query("SELECT u FROM User u WHERE u.nickName LIKE %:keyword% OR u.id LIKE %:keyword%")
+    Page<User> searchUserListByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    @Query("SELECT u FROM User u")
+    Page<User> searchUserList(@Param("keyword") String keyword, Pageable pageable);
 
 //    @Query("SELECT u from User u join Friend f on u.idx = f.friendIdx where f.userIdx=:idx")
 //    List<User> friendListByUserIdx(Long idx);
