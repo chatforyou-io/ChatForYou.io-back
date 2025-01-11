@@ -39,7 +39,7 @@ jobs:
       # 5. Docker 이미지 빌드 및 태그
       - name: Build Docker Image
         run: |
-          docker build --file Dockerfile -t ghcr.io/${{ github.repository_owner }}/chatforyou-io:${{ env.TIMESTAMP }} .
+          docker build --file Dockerfile -t ghcr.io/${{ github.repository_owner }}/chatforyou-io-backend:${{ env.TIMESTAMP }} .
 
       # 6. Docker 이미지 푸시 (GitHub Container Registry)
       - name: Push Docker Image to GitHub Packages
