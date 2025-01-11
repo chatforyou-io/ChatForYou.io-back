@@ -46,7 +46,7 @@ jobs:
       # 6. Docker 이미지 푸시 (GitHub Container Registry)
       - name: Push Docker Image to GitHub Packages
         run: |
-          echo "${{ secrets.GIT_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker push $IMAGE_URI
 
       # 7. Kubernetes 배포
