@@ -11,6 +11,9 @@ jobs:
     name: Build And Deploy K8S
     environment: chatforyou-back-env # 환경 지정
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
     env:
       KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       K8S_NAMESPACE: chatforyou-io # Kubernetes 네임스페이스
