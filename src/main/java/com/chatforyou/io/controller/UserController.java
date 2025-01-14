@@ -1,5 +1,6 @@
 package com.chatforyou.io.controller;
 
+import com.chatforyou.io.models.JwtPayload;
 import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.in.UserUpdateVo;
@@ -89,8 +90,8 @@ public class UserController {
     public ResponseEntity<Map<String, Object>> deleteUser(
             @RequestHeader("Authorization") String bearerToken,
             @RequestBody UserInVo user) throws BadRequestException {
-        jwtService.verifyAccessToken(bearerToken);
-        userService.deleteUser(user);
+        JwtPayload jwtPayload = jwtService.verifyAccessToken(bearerToken);
+        userService.deleteUser(user, jwtPayload);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         return new ResponseEntity<>(response, HttpStatus.OK);
