@@ -1,13 +1,16 @@
 package com.chatforyou.io.services.impl;
 
 import ch.qos.logback.core.util.StringUtil;
+import com.chatforyou.io.entity.SocialUser;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.DataType;
+import com.chatforyou.io.models.JwtPayload;
 import com.chatforyou.io.models.RedisIndex;
 import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.in.UserUpdateVo;
 import com.chatforyou.io.models.out.UserOutVo;
+import com.chatforyou.io.repository.SocialRepository;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.UserService;
@@ -21,6 +24,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -32,6 +36,7 @@ public class UserServiceImpl implements UserService {
 
     private final AuthService authService;
     private final RedisUtils redisUtils;
+    private final SocialRepository socialRepository;
 
     private final int MAX_FRIEND_USERS = 50;
 
@@ -64,7 +69,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserOutVo updateUser(UserUpdateVo userUpdateVo) throws BadRequestException {
+    @Transactional
+    public UserOutVo updateUser(UserUpdateVo userUpdateVo, JwtPayload jwtPayload) throws BadRequestException {
+        if (!Objects.equals(userUpdateVo.getIdx(), jwtPayload.getIdx())) {
+            throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
+        }
+
         User user = userRepository.findUserByIdx(userUpdateVo.getIdx())
                 .orElseThrow(()->new EntityNotFoundException("can not find user"));
 
@@ -73,7 +83,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserOutVo updateUserPwd(UserUpdateVo userUpdateVo) throws BadRequestException {
+    @Transactional
+    public UserOutVo updateUserPwd(UserUpdateVo userUpdateVo, JwtPayload jwtPayload) throws BadRequestException {
+        if (!Objects.equals(userUpdateVo.getIdx(), jwtPayload.getIdx())) {
+            throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
+        }
 
         User user = userRepository.findUserByIdx(userUpdateVo.getIdx())
                 .orElseThrow(()->new EntityNotFoundException("can not find user"));
@@ -100,16 +114,21 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean deleteUser(UserInVo userInVO) throws BadRequestException {
-        User user = userRepository.findUserById(userInVO.getId())
-                .orElseThrow(() -> new EntityNotFoundException("can not find user"));
-        if (!user.getPwd().equals(userInVO.getPwd())) {
-            throw new BadRequestException("does not match user pwd");
+    @Transactional
+    public void deleteUser(UserInVo userInVO, JwtPayload jwtPayload) throws BadRequestException {
+
+        if (!Objects.equals(userInVO.getIdx(), jwtPayload.getIdx())) {
+            throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
         }
-        int result = userRepository.deleteUserByIdxAndId(user.getIdx(), user.getId());
-        if (result > 0) {
-            return true;
-        } else {
+
+        User user = userRepository.findUserByIdx(userInVO.getIdx())
+                .orElseThrow(() -> new EntityNotFoundException("can not find user"));
+
+        try {
+            // 소셜 유저의 경우 cascade 설정이 되어있어 user 삭제 후 함께 삭제처리
+            userRepository.delete(user);
+
+        } catch (Exception e) {
             throw new BadRequestException("can not delete user");
         }
     }

@@ -16,7 +16,7 @@ public class SocialUser {
     @Column(name = "IDX", nullable = false)
     private Long idx;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false, orphanRemoval = true)
     @JoinColumn(name = "USER_IDX", nullable = false)
     private User user;
 
