@@ -37,9 +37,8 @@ public class UserController {
     public ResponseEntity<Map<String, Object>> getUserInfo(
             @RequestParam String id) {
         Map<String, Object> response = new HashMap<>();
-        UserOutVo userOutVo = userService.findUserById(id);
         response.put("result", "success");
-        response.put("userData", userOutVo);
+        response.put("userData", userService.findUserById(id));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -59,9 +58,8 @@ public class UserController {
     @PostMapping("/create")
     public ResponseEntity<Map<String, Object>> createUser(@RequestBody UserInVo user) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
-        UserOutVo userOutVo = userService.saveUser(user);
         response.put("result", "success");
-        response.put("userData", userOutVo);
+        response.put("userData", userService.saveUser(user));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -69,20 +67,20 @@ public class UserController {
     @PatchMapping("/update")
     public ResponseEntity<Map<String, Object>> updateUser(@RequestHeader("Authorization") String bearerToken,
                                                           @RequestBody UserUpdateVo userVo) throws BadRequestException {
-        jwtService.verifyAccessToken(bearerToken);
+        JwtPayload jwtPayload = jwtService.verifyAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
-        response.put("userData", userService.updateUser(userVo));
+        response.put("userData", userService.updateUser(userVo, jwtPayload));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PatchMapping("/update/pwd")
     public ResponseEntity<Map<String, Object>> updateUserPasswd(@RequestHeader("Authorization") String bearerToken,
                                                                 @RequestBody UserUpdateVo userVo) throws BadRequestException {
-        jwtService.verifyAccessToken(bearerToken);
+        JwtPayload jwtPayload = jwtService.verifyAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
-        response.put("userData", userService.updateUserPwd(userVo));
+        response.put("userData", userService.updateUserPwd(userVo, jwtPayload));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -96,7 +94,6 @@ public class UserController {
         response.put("result", "success");
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
-
 
     /**
      * 현재 로그인된 유저 목록 조회
@@ -138,14 +135,13 @@ public class UserController {
                 userService::getUserList);
     }
 
-
     /**
      * 사용자 리스트를 조회하기 위한 함수형 인터페이스.
      * keyword, pageNum, pageSize를 입력으로 받고, List<UserOutVo>를 반환
      */
     @FunctionalInterface
     private interface UserListFunction {
-        List<UserOutVo> apply(String keyword, int pageNum, int pageSize);
+        List<UserOutVo> execute(String keyword, int pageNum, int pageSize);
     }
 
     /**
@@ -169,7 +165,7 @@ public class UserController {
         int pageNum = Integer.parseInt(pageNumStr);
         int pageSize = Integer.parseInt(pageSizeStr);
 
-        List<UserOutVo> userList = userListFunction.apply(keyword, pageNum, pageSize);
+        List<UserOutVo> userList = userListFunction.execute(keyword, pageNum, pageSize);
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("result", "success");
         response.put("totalCount", userList.size());

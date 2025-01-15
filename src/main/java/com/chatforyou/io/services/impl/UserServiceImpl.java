@@ -70,7 +70,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserOutVo updateUser(UserUpdateVo userUpdateVo) throws BadRequestException {
+    public UserOutVo updateUser(UserUpdateVo userUpdateVo, JwtPayload jwtPayload) throws BadRequestException {
+        if (!Objects.equals(userUpdateVo.getIdx(), jwtPayload.getIdx())) {
+            throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
+        }
+
         User user = userRepository.findUserByIdx(userUpdateVo.getIdx())
                 .orElseThrow(()->new EntityNotFoundException("can not find user"));
 
@@ -80,7 +84,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserOutVo updateUserPwd(UserUpdateVo userUpdateVo) throws BadRequestException {
+    public UserOutVo updateUserPwd(UserUpdateVo userUpdateVo, JwtPayload jwtPayload) throws BadRequestException {
+        if (!Objects.equals(userUpdateVo.getIdx(), jwtPayload.getIdx())) {
+            throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
+        }
 
         User user = userRepository.findUserByIdx(userUpdateVo.getIdx())
                 .orElseThrow(()->new EntityNotFoundException("can not find user"));
