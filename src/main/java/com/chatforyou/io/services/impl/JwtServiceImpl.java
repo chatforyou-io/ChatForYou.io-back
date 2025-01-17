@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -169,6 +170,13 @@ public class JwtServiceImpl implements JwtService {
         // 유저 데이터 유효시간 업데이트
         redisUtils.updateExpiredDate(userIdx);
         return result;
+    }
+
+    @Override
+    public void validateUserIdx(Long requestedUserIdx, Long tokenUserIdx) throws BadRequestException {
+        if (!Objects.equals(requestedUserIdx, tokenUserIdx)) {
+            throw new BadRequestException("The user ID in the token does not match the user ID in the request.");
+        }
     }
 
     private String subStrBearerToken(String token) throws ExceptionController.JwtBearerException {
