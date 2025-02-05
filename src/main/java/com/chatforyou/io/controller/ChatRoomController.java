@@ -8,6 +8,7 @@ import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.services.ChatRoomService;
 import com.chatforyou.io.services.JwtService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/chatroom")
+@Slf4j
 public class ChatRoomController {
     private final JwtService jwtService;
     private final ChatRoomService chatRoomService;

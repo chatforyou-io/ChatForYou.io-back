@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ToString
-@JsonIgnoreProperties({"pwd", "currentUserCount", "userList"})
+@JsonIgnoreProperties({"pwd"})
 public class ChatRoomOutVo implements Serializable {
     private static final long serialVersionUID = 1L;
     private Long userIdx;
