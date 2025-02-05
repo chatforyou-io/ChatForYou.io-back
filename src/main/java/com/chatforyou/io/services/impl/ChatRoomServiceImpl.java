@@ -107,8 +107,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             currentUserCount = currentUserCount == null ? 0 : currentUserCount;
             List userList = redisUtils.getRedisDataByDataType(sessionId, DataType.USER_LIST, List.class);
 
-            log.info("chatroomInfo ::: {}", ChatRoomOutVo.of(chatRoom, userList, currentUserCount).toString());
-
             chatRoomList.add(ChatRoomOutVo.of(chatRoom, userList, currentUserCount));
         }
         return chatRoomList;
@@ -191,8 +189,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         Integer currentUserCount = (Integer) allChatRoomData.get(DataType.USER_COUNT.getType());
         currentUserCount = currentUserCount == null ? 0 : currentUserCount;
         List userList = redisUtils.getRedisDataByDataType(sessionId, DataType.USER_LIST, List.class);
-
-        log.info("chatroomInfo ::: {}", ChatRoomOutVo.of(chatRoom, userList, currentUserCount).toString());
 
         return ChatRoomOutVo.of(chatRoom, userList, currentUserCount);
     }

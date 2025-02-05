@@ -63,7 +63,6 @@ public class ChatRoomController {
         ChatRoomOutVo chatRoom = chatRoomService.findChatRoomBySessionId(sessionId);
         response.put("result", "success");
         response.put("roomData", chatRoom);
-        log.info("chatroom info last {}", chatRoom.toString());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -131,7 +130,6 @@ public class ChatRoomController {
         response.put("pageSize", pageSize);
         response.put("totalCount", chatRoomList.size());
         response.put("roomList", chatRoomList);
-        log.info("chatroom list last {}", chatRoomList.get(0).toString());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
