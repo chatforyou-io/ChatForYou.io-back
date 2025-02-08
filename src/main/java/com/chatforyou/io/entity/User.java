@@ -39,6 +39,12 @@ public class User {
     @Column(name = "CREATE_DATE", nullable = false)
     private Long createDate;
 
+    @Column(name = "UPDATE_DATE", nullable = false)
+    private Long updateDate;
+
+    @Column(name = "LAST_LOGIN_DATE")
+    private Long lastLoginDate;
+
 //    TODO 아래 기능들에 대해 논의 필요. 사용안하면 삭제 필요.
 //    @OneToMany(mappedBy = "userIdx", fetch = FetchType.LAZY)
 //    private Set<Board> boards;
@@ -50,6 +56,7 @@ public class User {
 //    private List<SocialUser> socialUsers;
 
     public static User ofSave(UserInVo userInVO){
+        long currentDate = new Date().getTime();
         return User.builder()
                 .idx(userInVO.getIdx())
                 .id(userInVO.getId())
@@ -57,7 +64,8 @@ public class User {
                 .usePwd(userInVO.getUsePwd())
                 .name(userInVO.getName())
                 .nickName(userInVO.getNickName())
-                .createDate(new Date().getTime())
+                .createDate(currentDate)
+                .updateDate(currentDate)
                 .build();
     }
 
@@ -70,17 +78,25 @@ public class User {
                 .name(user.getName())
                 .nickName(StringUtil.isNullOrEmpty(userUpdateVo.getNickName()) ? user.getNickName() : userUpdateVo.getNickName())
                 .createDate(user.getCreateDate())
+                .updateDate(new Date().getTime())
                 .build();
     }
 
     public static User ofSocialUser(SocialUserInVo socialUser){
+        long currentDate = new Date().getTime();
         return User.builder()
                 .id(socialUser.getId())
                 .pwd(Base64.getEncoder().encode(UUID.randomUUID().toString().getBytes()).toString())
                 .usePwd(false)
                 .name(socialUser.getName())
                 .nickName(socialUser.getName())
-                .createDate(new Date().getTime())
+                .createDate(currentDate)
+                .updateDate(currentDate)
+                .lastLoginDate(currentDate)
                 .build();
+    }
+
+    public void setLastLoginDate(Long lastLoginDate) {
+        this.lastLoginDate = lastLoginDate;
     }
 }
