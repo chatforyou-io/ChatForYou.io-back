@@ -17,18 +17,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @CrossOrigin(origins = "*")
@@ -37,23 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class AuthController {
 
-	// 관리자 쿠키의 최대 유효 시간 (24시간)
-	private int cookieAdminMaxAge = 24 * 60 * 60;
-
-	@Value("${CALL_USER}")
-	private String CALL_USER;
-
-	@Value("${CALL_SECRET}")
-	private String CALL_SECRET;
-
-	@Value("${CALL_ADMIN_SECRET}")
-	private String CALL_ADMIN_SECRET;
-
-	@Value("${CALL_OPENVIDU_CERTTYPE}")
-	private String CALL_OPENVIDU_CERTTYPE;
-
 	private final MailService mailService;
-	private final OpenViduService openviduService;
 	private final AuthService authService;
 	private final JwtService jwtService;
 
