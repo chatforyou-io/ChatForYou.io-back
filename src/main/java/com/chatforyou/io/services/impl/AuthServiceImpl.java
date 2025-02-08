@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
-
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -68,11 +67,23 @@ public class AuthServiceImpl implements AuthService {
 			throw new EntityNotFoundException("Invalid User Id or Password");
 		}
 
+		// 마지막 로그인 시간 업데이트
+		this.updateLastLoginTime(user);
+
 		UserOutVo userOutVo = UserOutVo.of(user, false);
 
-		userRedisJob(userOutVo);
+		this.userRedisJob(userOutVo);
 
 		return userOutVo;
+	}
+
+	/**
+	 * 마지막 로그인 시간 업데이트
+	 * @param user
+	 */
+	private void updateLastLoginTime(User user) {
+		user.setLastLoginDate(new Date().getTime());
+		userRepository.save(user);
 	}
 
 	@Override
@@ -80,17 +91,23 @@ public class AuthServiceImpl implements AuthService {
 		if (socialUserInVo.getProvider() == null || socialUserInVo.getProviderAccountId() == null) {
 			throw new BadRequestException("Need Provider or providerAccountId");
 		}
-		Optional<SocialUser> socialUser = socialRepository.findSocialUserByProviderAccountIdAndAndProvider(socialUserInVo.getProviderAccountId(), socialUserInVo.getProvider());
+
 		User user = null;
+
+		Optional<SocialUser> socialUser = socialRepository.findSocialUserByProviderAccountIdAndAndProvider(socialUserInVo.getProviderAccountId(), socialUserInVo.getProvider());
 		if (socialUser.isPresent()) { // 소셜 로그인 유저 정보가 있다면
-			UserOutVo userOutVo = UserOutVo.of(socialUser.get(), false);
+			user = socialUser.get().getUser();
+			// 유저 로그인시간 update
+			this.updateLastLoginTime(user);
+
+			// userVo 로 변환
+			UserOutVo userOutVo = UserOutVo.of(user, false);
 
 			// 유저 레디스 저장
-			userRedisJob(userOutVo);
+			this.userRedisJob(userOutVo);
 
 			return userOutVo;
-		} else { // 소셜 로그인 유저 정보가 없다면
-			// user 에 insert
+		} else { // 소셜 로그인 유저 정보가 없다면 user 에 insert
 			user = User.ofSocialUser(socialUserInVo);
 			userRepository.saveAndFlush(user);
 
@@ -101,7 +118,7 @@ public class AuthServiceImpl implements AuthService {
 			UserOutVo userOutVo = UserOutVo.of(socialUserEntity, false);
 
 			// 유저 레디스 저장
-			userRedisJob(userOutVo);
+			this.userRedisJob(userOutVo);
 
 			return userOutVo;
 		}

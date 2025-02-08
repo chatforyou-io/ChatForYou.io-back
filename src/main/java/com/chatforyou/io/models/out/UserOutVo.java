@@ -20,16 +20,14 @@ import java.util.Set;
 public class UserOutVo implements Serializable {
     private static final long serialVersionUID = 1L;
     private Long idx;
-
     private String id;
-
     private String pwd;
-
     private String name;
-
     private String nickName;
     private String provider;
     private List<User> friendList;
+    private Long createDate;
+    private Long lastLoginDate;
 
 //    TODO 아래 기능들에 대해 논의 필요. 사용안하면 삭제 필요.
 //    private Set<Board> boards;
@@ -46,6 +44,7 @@ public class UserOutVo implements Serializable {
                 .name(user.getName())
                 .nickName(user.getNickName())
                 .provider("")
+                .lastLoginDate(user.getLastLoginDate())
                 .build();
     }
 
@@ -58,6 +57,7 @@ public class UserOutVo implements Serializable {
                 .name(user.getName())
                 .nickName(user.getNickName())
                 .provider(socialUser.getProvider())
+                .lastLoginDate(user.getLastLoginDate())
                 .build();
     }
 

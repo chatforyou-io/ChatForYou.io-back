@@ -122,6 +122,9 @@ public class UserServiceImpl implements UserService {
             // 소셜 유저의 경우 cascade 설정이 되어있어 user 삭제 후 함께 삭제처리
             userRepository.delete(user);
 
+            // redis 에서 정보 삭제
+            redisUtils.deleteLoginUser(userInVO.getIdx());
+
         } catch (Exception e) {
             throw new BadRequestException("can not delete user");
         }
