@@ -1,7 +1,6 @@
 package com.chatforyou.io.controller;
 
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.security.SignatureException;
+import com.chatforyou.io.exception.CustomMessagingException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
@@ -11,9 +10,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.client.HttpClientErrorException;
-
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -137,6 +133,16 @@ public class ExceptionController {
         log.error("Required Request header 'Authorization' :: Bearer Token Error");
         log.error("Authorization Error : {}", ex.getMessage(), ex);
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(CustomMessagingException.class)
+    public ResponseEntity<Map<String, String>> handleCustomMessagingException(CustomMessagingException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("code", "500");
+        response.put("message", "Exception occurred while sending message to " + ex.getRecipient() + ": " + ex.getMessage());
+
+        log.error("CustomMessagingException occurred: {}", ex.getMessage(), ex);
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
 }
