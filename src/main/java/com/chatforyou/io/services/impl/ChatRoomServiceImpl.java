@@ -15,6 +15,7 @@ import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.ChatRoomService;
 import com.chatforyou.io.services.OpenViduService;
+import com.chatforyou.io.services.SseService;
 import com.chatforyou.io.utils.RedisUtils;
 import com.chatforyou.io.utils.ThreadUtils;
 import io.github.dengliming.redismodule.redisearch.index.Document;
@@ -38,6 +39,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final AuthService authService;
     private final OpenViduService openViduService;
     private final RedisUtils redisUtils;
+    private final SseService sseService;
 
     @Override
     @Transactional // 에러가 발생할 시 rollback 될 수 있도록 @Transactional 사용
@@ -73,6 +75,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             try{
                 chatRoomInVo.setRequiredRoomInfo(chatRoomEntity.getSessionId(), userEntity.getNickName(), chatRoomEntity.getCreateDate(), chatRoomEntity.getUpdateDate());
                 redisUtils.createChatRoomJob(chatRoomEntity.getSessionId(), chatRoomInVo, openViduRoom);
+                sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
                 return true;
             } catch (Exception e){
                 log.error("Unknown Exception occurred :: {} : {}", e.getMessage(), e);
@@ -140,11 +143,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
 
         OpenViduDto openViduDto = openViduService.joinOpenviduRoom(sessionId, joinUser);
+        List userList = redisUtils.getRedisDataByDataType(sessionId, DataType.USER_LIST, List.class);
+        ChatRoomOutVo roomInfo = ChatRoomOutVo.of(chatRoom, userList, currentUserCount);
 
         // Redis 저장을 thread 에서 하도록
         ThreadUtils.runTask(() -> {
             try {
                 redisUtils.joinUserJob(sessionId, UserOutVo.of(joinUser, false), openViduDto);
+                sseService.notifyChatRoomInfo(roomInfo);
                 return true;
             } catch (Exception e) {
                 log.error("Unknown Exception :: {} : {}", e.getMessage(), e);
@@ -153,8 +159,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }, 10, 10, "Join User");
 
 
-        List userList = redisUtils.getRedisDataByDataType(sessionId, DataType.USER_LIST, List.class);
-        result.put("roomInfo", ChatRoomOutVo.of(chatRoom, userList, currentUserCount));
+        result.put("roomInfo", roomInfo);
         tokens.put("camera_token", openViduDto.getSession().getConnections().get("con_camera_"+userIdx).getToken());
         tokens.put("screen_token", openViduDto.getSession().getConnections().get("con_screen_"+userIdx).getToken());
         result.put("joinUserInfo", tokens);
