@@ -51,6 +51,7 @@ public class SseServiceImpl implements SseService {
                 .forEach((subscriber) -> {
                     try {
                         subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomList").data(result));
+                        log.info("notifyChatRoomList To {}", subscriber.getUserIdx());
                     } catch (IOException e) {
                         subscriber.cleanupSubscriber();
                     }
@@ -64,6 +65,7 @@ public class SseServiceImpl implements SseService {
         subscribers.forEach(subscriber -> {
             try {
                 subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomInfo").data(result));
+                log.info("notifyChatRoomInfo To {}", subscriber.getUserIdx());
             } catch (IOException e) {
                 throw new RuntimeException("Unknown sseEmitter error", e);
             }
