@@ -44,4 +44,14 @@ public class SseSubscriberServiceImpl implements SseSubscriberService {
     public Collection<SseSubscriber> getRoomInfoSubscribersByRoomId(String sessionId) {
         return roomInfoRepository.get(sessionId).values();
     }
+
+    @Override
+    public void removeRoomListSubscriber(Long userIdx) {
+        this.roomListRepository.remove(userIdx);
+    }
+
+    @Override
+    public void removeRoomInfoSubscriber(String roomId, SseSubscriber subscriber) {
+        this.roomInfoRepository.get(roomId).remove(subscriber.getUserIdx());
+    }
 }

@@ -9,4 +9,6 @@ public interface SseSubscriberService {
     void addRoomInfoSubscriber(String roomId, SseSubscriber subscriber);
     Map<Long, SseSubscriber> getAllRoomListSubscribers();
     Collection<SseSubscriber> getRoomInfoSubscribersByRoomId(String sessionId);
+    void removeRoomListSubscriber(Long userIdx);
+    void removeRoomInfoSubscriber(String roomId, SseSubscriber subscriber);
 }

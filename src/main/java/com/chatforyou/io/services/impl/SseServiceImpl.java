@@ -32,14 +32,14 @@ public class SseServiceImpl implements SseService {
     @Override
     public SseEmitter subscribeRoomList(Long userIdx) {
 
-        SseSubscriber sseSubscriber = this.createSseSubscriber(userIdx, SseType.ROOM_LIST);
+        SseSubscriber sseSubscriber = this.createSseSubscriber(userIdx, "", SseType.ROOM_LIST);
         sseSubscriberService.addRoomListSubscriber(userIdx, sseSubscriber);
         return sseSubscriber.getSseEmitter();
     }
 
     @Override
     public SseEmitter subscribeRoomInfo(Long userIdx, String sessionId) {
-        SseSubscriber sseSubscriber = this.createSseSubscriber(userIdx, SseType.ROOM_INFO);
+        SseSubscriber sseSubscriber = this.createSseSubscriber(userIdx, sessionId, SseType.ROOM_INFO);
         sseSubscriberService.addRoomInfoSubscriber(sessionId, sseSubscriber);
         return sseSubscriber.getSseEmitter();
     }
@@ -52,8 +52,9 @@ public class SseServiceImpl implements SseService {
                     try {
                         subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomList").data(result));
                         log.info("notifyChatRoomList To {}", subscriber.getUserIdx());
-                    } catch (IOException e) {
+                    } catch (IOException | RuntimeException e){
                         subscriber.cleanupSubscriber();
+                        sseSubscriberService.removeRoomListSubscriber(subscriber.getUserIdx());
                     }
                 });
     }
@@ -66,16 +67,27 @@ public class SseServiceImpl implements SseService {
             try {
                 subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomInfo").data(result));
                 log.info("notifyChatRoomInfo To {}", subscriber.getUserIdx());
-            } catch (IOException e) {
-                throw new RuntimeException("Unknown sseEmitter error", e);
+            } catch (IOException | RuntimeException e){
+                subscriber.cleanupSubscriber();
+                sseSubscriberService.removeRoomInfoSubscriber(chatRoomInfo.getSessionId(), subscriber);
             }
         });
     }
 
-    private SseSubscriber createSseSubscriber(Long userIdx, SseType type) {
+    private SseSubscriber createSseSubscriber(Long userIdx, String sessionId, SseType type) {
         SseEmitter sseEmitter = new SseEmitter(type.getTimeOut());
         SseSubscriber sseSubscriber = SseSubscriber.of(userIdx, sseEmitter, schedulerConfig.scheduledExecutorService());
-        sseSubscriber.scheduleKeepAliveTask();
+        try{
+            sseSubscriber.scheduleKeepAliveTask();
+        } catch (IOException | RuntimeException e){
+            log.error(e.getMessage());
+            sseSubscriber.cleanupSubscriber();
+            sseSubscriberService.removeRoomListSubscriber(userIdx);
+            if(!sessionId.isEmpty()) {
+                sseSubscriberService.removeRoomInfoSubscriber(sessionId, sseSubscriber);
+            }
+        }
+
         return sseSubscriber;
     }
 }

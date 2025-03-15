@@ -20,6 +20,7 @@ public class SseSubscriber {
 
     private final Long userIdx;
     private final SseEmitter sseEmitter; // sse 전송을 담당하는 객체
+    private boolean isSseCompleted; // sse 전송이 끝났는지 확인
     private ScheduledFuture<?> scheduledFuture; // 주기적인 작업(keep-alive 메시지 전송)을 관리하는 객체
     private final ScheduledExecutorService scheduler; // 주기적인 작업을 실행하기 위한 스케줄러
 
@@ -36,20 +37,19 @@ public class SseSubscriber {
      * 연결 초기화 시 "connected" 메시지를 클라이언트에게 전송
      * 연결 확인 시 주기적으로  keep-alive 메시지 전송
      */
-    public void scheduleKeepAliveTask() {
+    public void scheduleKeepAliveTask() throws IOException {
 
-        try{
-            notifyConnection();
-        }catch (Exception e) {
-            cleanupSubscriber();
-        }
+        notifyConnection();
 
         // 25초마다 주기적으로 keep-alive 메시지를 전송하는 작업을 스케줄링
         this.scheduledFuture = this.scheduler.scheduleAtFixedRate(() -> {
             try {
+                if(this.sseEmitter == null  || this.isSseCompleted) { // sse 객체가 없어졌거나 연결이 종료된 경우 예외처리
+                    throw new RuntimeException();
+                }
                 sendKeepAlive();
             } catch (IOException e) {
-                cleanupSubscriber();
+                throw new RuntimeException(e);
             }
         }, 15, 15, TimeUnit.SECONDS);
 
@@ -84,7 +84,7 @@ public class SseSubscriber {
         if (this.scheduledFuture != null && !this.scheduledFuture.isCancelled()) {
             this.scheduledFuture.cancel(true);
         }
-
         this.sseEmitter.complete();
+        this.isSseCompleted = true;
     }
 }
