@@ -5,6 +5,7 @@ import com.chatforyou.io.models.DataType;
 import com.chatforyou.io.models.OpenViduDto;
 import com.chatforyou.io.models.RedisIndex;
 import com.chatforyou.io.models.in.ChatRoomInVo;
+import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -509,5 +510,10 @@ public class RedisUtils {
                 masterTemplate.delete(deleteKeys);
             }
         }
+    }
+
+    public void updateChatRoomInfo(ChatRoomOutVo chatRoomOutVo) {
+        String redisKey = "sessionId:" + chatRoomOutVo.getSessionId();
+        masterTemplate.opsForHash().put(redisKey, DataType.CHATROOM.getType(), chatRoomOutVo);
     }
 }

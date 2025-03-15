@@ -79,4 +79,21 @@ public class ChatRoomOutVo implements Serializable {
                 .updateDate(chatRoomInVo.getUpdateDate())
                 .build();
     }
+
+    public static ChatRoomOutVo updateOf(ChatRoomOutVo chatRoom, List<UserOutVo> userList, int currentUserCount){
+        return ChatRoomOutVo.builder()
+                .sessionId(chatRoom.getSessionId())
+                .creator(chatRoom.getCreator())
+                .userIdx(chatRoom.getUserIdx())
+                .roomName(chatRoom.getRoomName())
+                .usePwd(chatRoom.getUsePwd())
+                .usePrivate(chatRoom.getUsePrivate())
+                .useRtc(chatRoom.getUseRtc())
+                .currentUserCount(currentUserCount)
+                .maxUserCount(chatRoom.getMaxUserCount())
+                .userList(userList)
+                .createDate(chatRoom.getCreateDate())
+                .updateDate(chatRoom.getUpdateDate())
+                .build();
+    }
 }
