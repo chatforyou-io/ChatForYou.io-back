@@ -13,10 +13,9 @@ import com.chatforyou.io.models.out.SessionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.ChatRoomService;
-import com.chatforyou.io.services.OpenViduService;
 import com.chatforyou.io.services.OpenViduWebhookService;
+import com.chatforyou.io.services.SseService;
 import com.chatforyou.io.utils.RedisUtils;
-import com.chatforyou.io.utils.ThreadUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,17 +31,17 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
 
     private final RedisUtils redisUtils;
     private final ChatRoomService chatRoomService;
-    private final OpenViduService openViduService;
+    private final SseService sseService;
 
     @Override
     public void processWebhookEvent(OpenViduWebhookData webhookData) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
         log.info("====== WebHookData ::: {}", webhookData.toString());
 
         String sessionId = webhookData.getSessionId();
-        ChatRoomOutVo chatRoom = null;
+        ChatRoomOutVo chatRoomOutVo = null;
         OpenViduDto openViduDto = null;
         try {
-            chatRoom = chatRoomService.findChatRoomBySessionId(sessionId);
+            chatRoomOutVo = chatRoomService.findChatRoomBySessionId(sessionId);
             openViduDto = redisUtils.getRedisDataByDataType(sessionId, DataType.OPENVIDU, OpenViduDto.class);
 
         } catch (Exception e) {
@@ -54,6 +53,7 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
                 String connectionId = webhookData.getConnectionId();
                 Long userIdx = Long.parseLong(connectionId.split("_")[2]);
                 processParticipantLeftEvent(userIdx, sessionId, openViduDto);
+                sseService.notifyChatRoomInfo(chatRoomOutVo); // 유저 접속 종료 시 sse 이벤트
                 break;
             case SESSION_DESTROYED: // session 삭제
                 chatRoomService.deleteChatRoom(sessionId, JwtPayload.builder().build(), true);

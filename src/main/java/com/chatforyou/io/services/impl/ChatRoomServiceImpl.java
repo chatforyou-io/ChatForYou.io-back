@@ -250,8 +250,11 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             log.info("===== Already Deleted ChatRoom ====");
         }
 
-        sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9)); // 방 삭제 시 noti
-        ThreadUtils.runTask(() -> redisUtils.deleteKeysByStr(sessionId), 10, 100, "Delete sessionInfo ");
+        ThreadUtils.runTask(() -> {
+            redisUtils.deleteKeysByStr(sessionId);
+            sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9)); // 방 삭제 시 noti
+            return true;
+        }, 10, 100, "Delete sessionInfo ");
         ThreadUtils.runTask(() -> openViduService.closeSession(sessionId), 10, 100, "Delete openvidu data ");
         return true;
     }
