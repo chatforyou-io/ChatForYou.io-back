@@ -12,7 +12,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -50,23 +52,21 @@ public class SseServiceImpl implements SseService {
                     try {
                         subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomList").data(result));
                     } catch (IOException e) {
-                       subscriber.cleanupSubscriber();
+                        subscriber.cleanupSubscriber();
                     }
                 });
     }
 
     @Override
     public void notifyChatRoomInfo(ChatRoomOutVo chatRoomInfo) {
-
-
-//        roomInfoSubscribers.values()
-//                .forEach(subscriber -> {
-//                    try {
-//                        subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomInfo").data(chatRoomInfo));
-//                    } catch (IOException e) {
-//                        throw new RuntimeException("Unknown sseEmitter error", e);
-//                    }
-//                });
+        Collection<SseSubscriber> subscribers = sseSubscriberService.getRoomInfoSubscribersByRoomId(chatRoomInfo.getSessionId());
+        subscribers.forEach(subscriber -> {
+            try {
+                subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomInfo").data(chatRoomInfo));
+            } catch (IOException e) {
+                throw new RuntimeException("Unknown sseEmitter error", e);
+            }
+        });
     }
 
     private SseSubscriber createSseSubscriber(Long userIdx, SseType type) {

@@ -9,8 +9,8 @@ public class InMemorySubscriberRepository<K, T> implements SubscriberRepository<
     private final Map<K, T> store = new ConcurrentHashMap<>();
 
     @Override
-    public void add(K key, T subscriber) {
-        store.put(key, subscriber);
+    public void add(K key, T obj) {
+        store.put(key, obj);
     }
 
     @Override

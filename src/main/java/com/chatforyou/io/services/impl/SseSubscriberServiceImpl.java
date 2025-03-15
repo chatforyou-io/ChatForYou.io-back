@@ -5,14 +5,16 @@ import com.chatforyou.io.repository.SubscriberRepository;
 import com.chatforyou.io.services.SseSubscriberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 public class SseSubscriberServiceImpl implements SseSubscriberService {
-    // SseSubscriber 이 아닌 각각 나누면...?
     private final SubscriberRepository<Long, SseSubscriber> roomListRepository;
-    private final SubscriberRepository<String, SseSubscriber> roomInfoRepository;
+    private final SubscriberRepository<String, Map<Long, SseSubscriber>> roomInfoRepository;
 
     @Override
     public void addRoomListSubscriber(Long userIdx, SseSubscriber subscriber) {
@@ -21,7 +23,16 @@ public class SseSubscriberServiceImpl implements SseSubscriberService {
 
     @Override
     public void addRoomInfoSubscriber(String roomId, SseSubscriber subscriber) {
-        roomInfoRepository.add(roomId, subscriber);
+        Map<Long, SseSubscriber> subscribers = roomInfoRepository.get(roomId);
+
+        // 만약 구독자 목록이 없다면 새로 생성하여 추가
+        if (subscribers == null) {
+            subscribers = new ConcurrentHashMap<>();
+            roomInfoRepository.add(roomId, subscribers);
+        }
+
+        // userIdx를 키로 사용하여 중복 체크 없이 바로 추가 또는 교체
+        subscribers.put(subscriber.getUserIdx(), subscriber);
     }
 
     @Override
@@ -30,7 +41,7 @@ public class SseSubscriberServiceImpl implements SseSubscriberService {
     }
 
     @Override
-    public Map<String, SseSubscriber> getAllRoomInfoSubscribers() {
-        return roomInfoRepository.getAll();
+    public Collection<SseSubscriber> getRoomInfoSubscribersByRoomId(String sessionId) {
+        return roomInfoRepository.get(sessionId).values();
     }
 }
