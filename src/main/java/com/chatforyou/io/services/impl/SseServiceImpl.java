@@ -60,9 +60,10 @@ public class SseServiceImpl implements SseService {
     @Override
     public void notifyChatRoomInfo(ChatRoomOutVo chatRoomInfo) {
         Collection<SseSubscriber> subscribers = sseSubscriberService.getRoomInfoSubscribersByRoomId(chatRoomInfo.getSessionId());
+        Map<String, ChatRoomOutVo> result = Map.of("data", chatRoomInfo);
         subscribers.forEach(subscriber -> {
             try {
-                subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomInfo").data(chatRoomInfo));
+                subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomInfo").data(result));
             } catch (IOException e) {
                 throw new RuntimeException("Unknown sseEmitter error", e);
             }
