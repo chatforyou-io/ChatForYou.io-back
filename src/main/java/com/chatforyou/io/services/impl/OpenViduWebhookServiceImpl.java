@@ -16,14 +16,11 @@ import com.chatforyou.io.services.ChatRoomService;
 import com.chatforyou.io.services.OpenViduWebhookService;
 import com.chatforyou.io.services.SseService;
 import com.chatforyou.io.utils.RedisUtils;
-import com.chatforyou.io.utils.ThreadUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -44,7 +41,6 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
         ChatRoomOutVo chatRoomOutVo = null;
         OpenViduDto openViduDto = null;
         try {
-            chatRoomOutVo = chatRoomService.findChatRoomBySessionId(sessionId);
             openViduDto = redisUtils.getRedisDataByDataType(sessionId, DataType.OPENVIDU, OpenViduDto.class);
 
         } catch (Exception e) {
@@ -55,8 +51,8 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
             case PARTICIPANT_LEFT:  // 유저 접속 종료
                 String connectionId = webhookData.getConnectionId();
                 Long userIdx = Long.parseLong(connectionId.split("_")[2]);
-                processParticipantLeftEvent(userIdx, sessionId, chatRoomOutVo, openViduDto);
-                sseService.notifyChatRoomInfo(chatRoomOutVo); // 유저 접속 종료 시 sse 이벤트
+                processParticipantLeftEvent(userIdx, sessionId, openViduDto);
+                sseService.notifyChatRoomInfo(chatRoomService.findChatRoomBySessionId(sessionId));
                 break;
             case SESSION_DESTROYED: // session 삭제
                 chatRoomService.deleteChatRoom(sessionId, JwtPayload.builder().build(), true);
@@ -64,7 +60,7 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
         }
     }
 
-    private void processParticipantLeftEvent(Long userIdx, String sessionId, ChatRoomOutVo chatRoomOutVo, OpenViduDto openViduDto) {
+    private void processParticipantLeftEvent(Long userIdx, String sessionId, OpenViduDto openViduDto) {
         User leftUser = userRepository.findUserByIdx(userIdx)
                 .orElseThrow(() -> new EntityNotFoundException("Can not find User"));
 
@@ -84,21 +80,7 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
         redisUtils.deleteConnectionTokens(sessionId, String.valueOf(userIdx));
         redisUtils.leftUserJob(sessionId, updatedOpenViduData, UserOutVo.of(leftUser, false));
 
-        // redis 에 방정보 업데이트
-        ThreadUtils.runTask(()->{
-            try{
-                int userCount = redisUtils.getUserCount(sessionId);
-                List userList = redisUtils.getRedisDataByDataType(sessionId, DataType.USER_LIST, List.class);
-                redisUtils.updateChatRoomInfo(ChatRoomOutVo.updateOf(chatRoomOutVo, userList, userCount));
-                return true;
-            } catch (Exception e) {
-                log.error("Unknown Exception :: {} : {}", e.getMessage(), e);
-                return false;
-            }
-        }, 10, 10, "Left User SSE Job");
-
         log.info("Delete Participant Connection success");
         log.info("Left User success");
-
     }
 }

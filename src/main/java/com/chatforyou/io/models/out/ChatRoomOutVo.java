@@ -24,6 +24,7 @@ public class ChatRoomOutVo implements Serializable {
     private Boolean usePwd;
     private Boolean usePrivate;
     private Boolean useRtc;
+    private String desc;
     @Setter
     private Integer currentUserCount;
     private Integer maxUserCount;
