@@ -16,7 +16,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ToString
-@JsonIgnoreProperties({"pwd"})
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UserOutVo implements Serializable {
     private static final long serialVersionUID = 1L;
     private Long idx;
