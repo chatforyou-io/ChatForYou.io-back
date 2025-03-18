@@ -10,6 +10,7 @@ import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.repository.SocialRepository;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.AuthService;
+import com.chatforyou.io.services.SseService;
 import com.chatforyou.io.utils.AuthUtils;
 import com.chatforyou.io.utils.RedisUtils;
 import com.chatforyou.io.utils.ThreadUtils;
@@ -31,6 +32,7 @@ public class AuthServiceImpl implements AuthService {
 	private final UserRepository userRepository;
 	private final SocialRepository socialRepository;
 	private final RedisUtils redisUtils;
+	private final SseService sseService;
 
 	private Map<String, AdminSessionData> adminSessions = new HashMap<>();
 
@@ -124,6 +126,24 @@ public class AuthServiceImpl implements AuthService {
 		}
 	}
 
+	/**
+	 * 유저 정보를 레디스에 저장
+	 * @param user
+	 */
+	private void userRedisJob(UserOutVo user){
+		ThreadUtils.runTask(()->{
+			try {
+				redisUtils.saveLoginUser(user);
+				// 유저 데이터 유효시간 업데이트
+				redisUtils.updateExpiredDate(user.getIdx());
+				sseService.notifyUserList();
+				return true;
+			} catch (Exception e) {
+				return false;
+			}
+		}, 10, 10, "Save Login User Info");
+	}
+
 	@Override
 	public void logoutUser(UserInVo user) {
 		if (userRepository.findUserByIdx(user.getIdx()).isEmpty()) {
@@ -133,10 +153,10 @@ public class AuthServiceImpl implements AuthService {
 		ThreadUtils.runTask(()->{
 			try {
 				redisUtils.deleteLoginUser(user.getIdx());
+				sseService.notifyUserList();
 				return true;
 			} catch (Exception e) {
-				log.error("=== Error User :: {}", user.toString());
-				log.error("=== Unknown Exception :: {} : {}", e.getMessage(), e);
+				log.error("=== Unknown Exception :: {}", e.getMessage(), e);
 				return false;
 			}
 		}, 10, 10, "Delete Login User Info");
@@ -157,23 +177,6 @@ public class AuthServiceImpl implements AuthService {
 		}
 
 		return false;
-	}
-
-	/**
-	 * 유저 정보를 레디스에 저장
-	 * @param user
-	 */
-	private void userRedisJob(UserOutVo user){
-		ThreadUtils.runTask(()->{
-			try {
-				redisUtils.saveLoginUser(user);
-				// 유저 데이터 유효시간 업데이트
-				redisUtils.updateExpiredDate(user.getIdx());
-				return true;
-			} catch (Exception e) {
-				return false;
-			}
-		}, 10, 10, "Save Login User Info");
 	}
 
 }

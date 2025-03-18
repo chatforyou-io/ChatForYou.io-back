@@ -13,12 +13,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @RequiredArgsConstructor
 public class SseSubscriberServiceImpl implements SseSubscriberService {
-    private final SubscriberRepository<Long, SseSubscriber> roomListRepository;
+    private final SubscriberRepository<Long, SseSubscriber> dashboardRepository;
     private final SubscriberRepository<String, Map<Long, SseSubscriber>> roomInfoRepository;
 
     @Override
-    public void addRoomListSubscriber(Long userIdx, SseSubscriber subscriber) {
-        roomListRepository.add(userIdx, subscriber);
+    public void addDashboardSubscriber(Long userIdx, SseSubscriber subscriber) {
+        dashboardRepository.add(userIdx, subscriber);
     }
 
     @Override
@@ -36,8 +36,8 @@ public class SseSubscriberServiceImpl implements SseSubscriberService {
     }
 
     @Override
-    public Map<Long, SseSubscriber> getAllRoomListSubscribers() {
-        return roomListRepository.getAll();
+    public Map<Long, SseSubscriber> getDashboardSubscribers() {
+        return dashboardRepository.getAll();
     }
 
     @Override
@@ -46,8 +46,8 @@ public class SseSubscriberServiceImpl implements SseSubscriberService {
     }
 
     @Override
-    public void removeRoomListSubscriber(Long userIdx) {
-        this.roomListRepository.remove(userIdx);
+    public void removeDashboardSubscriber(Long userIdx) {
+        this.dashboardRepository.remove(userIdx);
     }
 
     @Override

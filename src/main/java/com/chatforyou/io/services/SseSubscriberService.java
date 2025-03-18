@@ -5,10 +5,10 @@ import java.util.Collection;
 import java.util.Map;
 
 public interface SseSubscriberService {
-    void addRoomListSubscriber(Long userIdx, SseSubscriber subscriber);
+    void addDashboardSubscriber(Long userIdx, SseSubscriber subscriber);
     void addRoomInfoSubscriber(String roomId, SseSubscriber subscriber);
-    Map<Long, SseSubscriber> getAllRoomListSubscribers();
+    Map<Long, SseSubscriber> getDashboardSubscribers();
     Collection<SseSubscriber> getRoomInfoSubscribersByRoomId(String sessionId);
-    void removeRoomListSubscriber(Long userIdx);
+    void removeDashboardSubscriber(Long userIdx);
     void removeRoomInfoSubscriber(String roomId, SseSubscriber subscriber);
 }

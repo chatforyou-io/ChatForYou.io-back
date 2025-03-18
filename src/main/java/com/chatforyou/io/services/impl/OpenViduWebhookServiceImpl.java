@@ -7,7 +7,6 @@ import com.chatforyou.io.models.DataType;
 import com.chatforyou.io.models.JwtPayload;
 import com.chatforyou.io.models.OpenViduDto;
 import com.chatforyou.io.models.OpenViduWebhookData;
-import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.SessionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
@@ -38,7 +37,6 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
         log.info("====== WebHookData ::: {}", webhookData.toString());
 
         String sessionId = webhookData.getSessionId();
-        ChatRoomOutVo chatRoomOutVo = null;
         OpenViduDto openViduDto = null;
         try {
             openViduDto = redisUtils.getRedisDataByDataType(sessionId, DataType.OPENVIDU, OpenViduDto.class);
@@ -52,7 +50,6 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
                 String connectionId = webhookData.getConnectionId();
                 Long userIdx = Long.parseLong(connectionId.split("_")[2]);
                 processParticipantLeftEvent(userIdx, sessionId, openViduDto);
-                sseService.notifyChatRoomInfo(chatRoomService.findChatRoomBySessionId(sessionId));
                 break;
             case SESSION_DESTROYED: // session 삭제
                 chatRoomService.deleteChatRoom(sessionId, JwtPayload.builder().build(), true);
@@ -60,7 +57,7 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
         }
     }
 
-    private void processParticipantLeftEvent(Long userIdx, String sessionId, OpenViduDto openViduDto) {
+    private void processParticipantLeftEvent(Long userIdx, String sessionId, OpenViduDto openViduDto) throws BadRequestException {
         User leftUser = userRepository.findUserByIdx(userIdx)
                 .orElseThrow(() -> new EntityNotFoundException("Can not find User"));
 
@@ -79,6 +76,14 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
         // redis 에서 유저 connection token 및 방에서 유저 삭제
         redisUtils.deleteConnectionTokens(sessionId, String.valueOf(userIdx));
         redisUtils.leftUserJob(sessionId, updatedOpenViduData, UserOutVo.of(leftUser, false));
+
+        try{
+            // sse 이벤트 전송
+            sseService.notifyChatRoomInfo(chatRoomService.findChatRoomBySessionId(sessionId));
+        } catch (Exception e){
+            throw new BadRequestException("Unknown Error :: {}", e);
+        }
+
 
         log.info("Delete Participant Connection success");
         log.info("Left User success");

@@ -4,5 +4,5 @@ import com.chatforyou.io.models.sse.SseSubscriber;
 import org.springframework.stereotype.Component;
 
 @Component
-public class RoomListSubscriberRepository extends InMemorySubscriberRepository<Long, SseSubscriber>{
+public class DashboardSubscriberRepository extends InMemorySubscriberRepository<Long, SseSubscriber>{
 }

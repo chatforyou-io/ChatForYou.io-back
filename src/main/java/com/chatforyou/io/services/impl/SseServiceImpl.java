@@ -1,13 +1,14 @@
 package com.chatforyou.io.services.impl;
 
 import com.chatforyou.io.config.SchedulerConfig;
+import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.models.sse.SseSubscriber;
 import com.chatforyou.io.models.sse.SseType;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.services.JwtService;
 import com.chatforyou.io.services.SseService;
 import com.chatforyou.io.services.SseSubscriberService;
-import com.chatforyou.io.utils.RedisUtils;
+import com.chatforyou.io.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,7 +26,7 @@ public class SseServiceImpl implements SseService {
 
     private final JwtService jwtService;
     // TODO 만약 레디스를 사용하면 유저 로그아웃 시 해당 정보를 sse 정보에서도 삭제 필요!! 방에 대한 처리도 마찬가지
-    private final RedisUtils redisUtils;
+    private final UserService userService;
     private final SseSubscriberService sseSubscriberService;
     private final SchedulerConfig schedulerConfig;
 
@@ -33,7 +34,7 @@ public class SseServiceImpl implements SseService {
     public SseEmitter subscribeRoomList(Long userIdx) {
 
         SseSubscriber sseSubscriber = this.createSseSubscriber(userIdx, "", SseType.ROOM_LIST);
-        sseSubscriberService.addRoomListSubscriber(userIdx, sseSubscriber);
+        sseSubscriberService.addDashboardSubscriber(userIdx, sseSubscriber);
         return sseSubscriber.getSseEmitter();
     }
 
@@ -47,14 +48,14 @@ public class SseServiceImpl implements SseService {
     @Override
     public void notifyChatRoomList(List<ChatRoomOutVo> chatRoomList) {
         Map<String, List<ChatRoomOutVo>> result = Map.of("data", chatRoomList);
-        sseSubscriberService.getAllRoomListSubscribers().values()
+        sseSubscriberService.getDashboardSubscribers().values()
                 .forEach((subscriber) -> {
                     try {
                         subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomList").data(result));
-                        log.info("notifyChatRoomList To {}", subscriber.getUserIdx());
+                        log.debug("notifyChatRoomList To {}", subscriber.getUserIdx());
                     } catch (IOException | RuntimeException e){
                         subscriber.cleanupSubscriber();
-                        sseSubscriberService.removeRoomListSubscriber(subscriber.getUserIdx());
+                        sseSubscriberService.removeDashboardSubscriber(subscriber.getUserIdx());
                     }
                 });
     }
@@ -66,13 +67,40 @@ public class SseServiceImpl implements SseService {
         subscribers.forEach(subscriber -> {
             try {
                 subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomInfo").data(result));
-                log.info("notifyChatRoomInfo To {}", subscriber.getUserIdx());
+                log.debug("notifyChatRoomInfo To {}", subscriber.getUserIdx());
             } catch (IOException | RuntimeException e){
                 subscriber.cleanupSubscriber();
                 sseSubscriberService.removeRoomInfoSubscriber(chatRoomInfo.getSessionId(), subscriber);
             }
         });
     }
+
+    @Override
+    public void notifyUserList() {
+        List<UserOutVo> userList = userService.getUserList("", 0, 20);
+
+        List<UserOutVo> loginUserList = userService.getLoginUserList("", 0, 20);
+
+        Map<String, Object> result = Map.of(
+                "userList", userList,      // 전체 유저
+                "loginUserList", loginUserList // 로그인된 유저
+        );
+
+        sseSubscriberService.getDashboardSubscribers().values().forEach(subscriber -> {
+            try {
+                subscriber.getSseEmitter().send(
+                        SseEmitter.event()
+                                .name("updateUserList")
+                                .data(result)
+                );
+                log.debug("notifyUserList To {}", subscriber.getUserIdx());
+            } catch (IOException | RuntimeException e) {
+                subscriber.cleanupSubscriber();
+                sseSubscriberService.removeDashboardSubscriber(subscriber.getUserIdx());
+            }
+        });
+    }
+
 
     private SseSubscriber createSseSubscriber(Long userIdx, String sessionId, SseType type) {
         SseEmitter sseEmitter = new SseEmitter(type.getTimeOut());
@@ -82,7 +110,7 @@ public class SseServiceImpl implements SseService {
         } catch (IOException | RuntimeException e){
             log.error(e.getMessage());
             sseSubscriber.cleanupSubscriber();
-            sseSubscriberService.removeRoomListSubscriber(userIdx);
+            sseSubscriberService.removeDashboardSubscriber(userIdx);
             if(!sessionId.isEmpty()) {
                 sseSubscriberService.removeRoomInfoSubscriber(sessionId, sseSubscriber);
             }

@@ -11,4 +11,5 @@ public interface SseService {
     SseEmitter subscribeRoomInfo(Long userIdx, String sessionId) throws BadRequestException;
     void notifyChatRoomList(List<ChatRoomOutVo> chatRoomList) throws BadRequestException;
     void notifyChatRoomInfo(ChatRoomOutVo chatRoomInfo);
+    void notifyUserList() throws BadRequestException;
 }
