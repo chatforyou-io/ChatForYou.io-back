@@ -1,6 +1,7 @@
 package com.chatforyou.io.services;
 
 import com.chatforyou.io.models.out.ChatRoomOutVo;
+import com.chatforyou.io.models.out.UserOutVo;
 import org.apache.coyote.BadRequestException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -11,5 +12,5 @@ public interface SseService {
     SseEmitter subscribeRoomInfo(Long userIdx, String sessionId) throws BadRequestException;
     void notifyChatRoomList(List<ChatRoomOutVo> chatRoomList) throws BadRequestException;
     void notifyChatRoomInfo(ChatRoomOutVo chatRoomInfo);
-    void notifyUserList() throws BadRequestException;
+    void notifyUserList(List<UserOutVo> userList, List<UserOutVo> loginUserList) throws BadRequestException;
 }

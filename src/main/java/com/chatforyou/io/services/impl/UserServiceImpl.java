@@ -1,7 +1,6 @@
 package com.chatforyou.io.services.impl;
 
 import ch.qos.logback.core.util.StringUtil;
-import com.chatforyou.io.entity.SocialUser;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.DataType;
 import com.chatforyou.io.models.JwtPayload;
@@ -10,11 +9,10 @@ import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.in.UserUpdateVo;
 import com.chatforyou.io.models.out.UserOutVo;
-import com.chatforyou.io.repository.SocialRepository;
 import com.chatforyou.io.repository.UserRepository;
-import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.JwtService;
 import com.chatforyou.io.services.UserService;
+import com.chatforyou.io.utils.AuthUtils;
 import com.chatforyou.io.utils.JsonUtils;
 import com.chatforyou.io.utils.RedisUtils;
 import io.github.dengliming.redismodule.redisearch.index.Document;
@@ -34,10 +32,9 @@ import java.util.*;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-
-    private final AuthService authService;
     private final RedisUtils redisUtils;
     private final JwtService jwtService;
+    private final AuthUtils authUtils;
 
     private final int MAX_FRIEND_USERS = 50;
 
@@ -62,7 +59,7 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("can not confirm user Password");
         }
 
-        if (authService.validateStrByType(ValidateType.ID, userInVO.getId())) {
+        if (authUtils.validateStrByType(ValidateType.ID, userInVO.getId())) {
             throw new BadRequestException("Already Exist User ID");
         }
         User userEntity = User.ofSave(userInVO);

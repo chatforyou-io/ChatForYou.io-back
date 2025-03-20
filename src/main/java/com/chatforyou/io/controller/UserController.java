@@ -8,6 +8,7 @@ import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.JwtService;
 import com.chatforyou.io.services.UserService;
+import com.chatforyou.io.utils.AuthUtils;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
@@ -30,8 +31,8 @@ public class UserController {
      */
 
     private final UserService userService;
-    private final AuthService authService;
     private final JwtService jwtService;
+    private final AuthUtils authUtils;
 
     @GetMapping("/info")
     public ResponseEntity<Map<String, Object>> getUserInfo(
@@ -47,7 +48,7 @@ public class UserController {
             @RequestParam String nickName) throws BadRequestException {
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
-        if (authService.validateStrByType(ValidateType.NICKNAME, nickName)) {
+        if (authUtils.validateStrByType(ValidateType.NICKNAME, nickName)) {
             throw new BadRequestException("already exist user NickName");
         }
         response.put("userData", false);

@@ -24,9 +24,6 @@ import java.util.Map;
 @Slf4j
 public class SseServiceImpl implements SseService {
 
-    private final JwtService jwtService;
-    // TODO 만약 레디스를 사용하면 유저 로그아웃 시 해당 정보를 sse 정보에서도 삭제 필요!! 방에 대한 처리도 마찬가지
-    private final UserService userService;
     private final SseSubscriberService sseSubscriberService;
     private final SchedulerConfig schedulerConfig;
 
@@ -76,10 +73,7 @@ public class SseServiceImpl implements SseService {
     }
 
     @Override
-    public void notifyUserList() {
-        List<UserOutVo> userList = userService.getUserList("", 0, 20);
-
-        List<UserOutVo> loginUserList = userService.getLoginUserList("", 0, 20);
+    public void notifyUserList(List<UserOutVo> userList, List<UserOutVo> loginUserList) {
 
         Map<String, Object> result = Map.of(
                 "userList", userList,      // 전체 유저

@@ -10,6 +10,6 @@ import java.util.concurrent.ScheduledExecutorService;
 public class SchedulerConfig {
     @Bean
     public ScheduledExecutorService scheduledExecutorService() {
-        return Executors.newScheduledThreadPool(4);
+        return Executors.newScheduledThreadPool(6);
     }
 }

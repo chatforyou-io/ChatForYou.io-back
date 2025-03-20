@@ -16,6 +16,7 @@ import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.ChatRoomService;
 import com.chatforyou.io.services.OpenViduService;
 import com.chatforyou.io.services.SseService;
+import com.chatforyou.io.utils.AuthUtils;
 import com.chatforyou.io.utils.RedisUtils;
 import com.chatforyou.io.utils.ThreadUtils;
 import io.github.dengliming.redismodule.redisearch.index.Document;
@@ -36,9 +37,9 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final UserRepository userRepository;
-    private final AuthService authService;
     private final OpenViduService openViduService;
     private final RedisUtils redisUtils;
+    private final AuthUtils authUtils;
     private final SseService sseService;
 
     @Override
@@ -268,7 +269,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             throw new BadRequestException("User Count must be at least 2");
         }
 
-        if (authService.validateStrByType(ValidateType.CHATROOM_NAME, chatRoomInVo.getRoomName())) {
+        if (authUtils.validateStrByType(ValidateType.CHATROOM_NAME, chatRoomInVo.getRoomName())) {
             throw new BadRequestException("already exist room");
         }
     }
