@@ -3,6 +3,7 @@ package com.chatforyou.io.services.impl;
 import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
+import com.chatforyou.io.config.SchedulerConfig;
 import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.*;
@@ -40,6 +41,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final RedisUtils redisUtils;
     private final AuthUtils authUtils;
     private final SseService sseService;
+    private final SchedulerConfig schedulerConfig;
 
     @Override
     @Transactional // 에러가 발생할 시 rollback 될 수 있도록 @Transactional 사용
@@ -75,13 +77,27 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             try{
                 chatRoomInVo.setRequiredRoomInfo(chatRoomEntity.getSessionId(), userEntity.getNickName(), chatRoomEntity.getCreateDate(), chatRoomEntity.getUpdateDate());
                 redisUtils.createChatRoomJob(chatRoomEntity.getSessionId(), chatRoomInVo, openViduRoom);
-                sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
                 return true;
             } catch (Exception e){
-                log.error("Unknown Exception occurred :: {} : {}", e.getMessage(), e);
+                log.error("Unknown Exception occurred :: {} : {}", e.getMessage(), e.getMessage());
                 return false;
             }
-        }, 10, 10, "Create ChatRoom");
+        }, 10, 10, "Create ChatRoom")
+                .thenApplyAsync(result -> {
+                    if(Boolean.TRUE.equals(result)) {
+                        try {
+                            sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
+                        } catch (Exception e) {
+                            log.error("SSE 작업 중 예상치 못한 오류 발생 | Details: {}", e.getMessage());
+                        }
+                    }
+
+                    return result;
+                }, schedulerConfig.scheduledExecutorService())
+                .exceptionally(ex -> {
+                    log.error("Final failure after retries", ex);
+                    return false;
+                });
 
         return ChatRoomOutVo.of(chatRoomEntity, 0);
     }
@@ -148,16 +164,31 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
         // Redis 저장을 thread 에서 하도록
         ThreadUtils.runTask(() -> {
-            try {
-                redisUtils.joinUserJob(sessionId, UserOutVo.of(joinUser, false), openViduDto);
-                sseService.notifyChatRoomInfo(roomInfo);
-                sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
-                return true;
-            } catch (Exception e) {
-                log.error("Unknown Exception :: {} : {}", e.getMessage(), e);
-                return false;
-            }
-        }, 10, 10, "Join User");
+                    try {
+                        redisUtils.joinUserJob(sessionId, UserOutVo.of(joinUser, false), openViduDto);
+                        return true;
+                    } catch (Exception e) {
+                        log.error("Redis 작업 중 예상치 못한 오류 발생 | Session ID: {}, Details: {}",
+                                sessionId, e.getStackTrace());
+                        return false;
+                    }
+                }, 10, 10, "Join User")
+                .thenApplyAsync(jobResult -> {
+                    if (Boolean.TRUE.equals(jobResult)) {
+                        try {
+                            sseService.notifyChatRoomInfo(roomInfo);
+                            sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
+                        } catch (Exception e) {
+                            log.error("SSE 작업 중 예상치 못한 오류 발생 | Session ID: {}, Details: {}",
+                                    roomInfo.getSessionId(), e.getStackTrace());
+                        }
+                    }
+                    return jobResult;
+                }, schedulerConfig.scheduledExecutorService())
+                .exceptionally(ex -> {
+                    log.error("Final failure after retries", ex);
+                    return false;
+                });
 
 
         result.put("roomInfo", roomInfo);
