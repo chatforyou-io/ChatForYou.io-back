@@ -12,7 +12,6 @@ import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.repository.ChatRoomRepository;
 import com.chatforyou.io.repository.UserRepository;
-import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.ChatRoomService;
 import com.chatforyou.io.services.OpenViduService;
 import com.chatforyou.io.services.SseService;
@@ -152,6 +151,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             try {
                 redisUtils.joinUserJob(sessionId, UserOutVo.of(joinUser, false), openViduDto);
                 sseService.notifyChatRoomInfo(roomInfo);
+                sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
                 return true;
             } catch (Exception e) {
                 log.error("Unknown Exception :: {} : {}", e.getMessage(), e);
