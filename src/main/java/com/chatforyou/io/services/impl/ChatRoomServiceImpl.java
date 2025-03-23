@@ -88,7 +88,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                         try {
                             sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
                         } catch (Exception e) {
-                            log.error("SSE 작업 중 예상치 못한 오류 발생 | Details: {}", e.getMessage());
+                            log.error("Unknown Runtime Exception | Message : {} | Details : {}", e.getMessage(), e.getStackTrace());
                         }
                     }
 
@@ -179,8 +179,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                             sseService.notifyChatRoomInfo(roomInfo);
                             sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
                         } catch (Exception e) {
-                            log.error("SSE 작업 중 예상치 못한 오류 발생 | Session ID: {}, Details: {}",
-                                    roomInfo.getSessionId(), e.getStackTrace());
+                            log.error("Unknown Runtime Exception | Message ID: {}, Details: {}", e.getMessage(), e.getStackTrace());
                         }
                     }
                     return jobResult;
@@ -283,11 +282,25 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
 
         ThreadUtils.runTask(() -> {
+            openViduService.closeSession(sessionId);
             redisUtils.deleteKeysByStr(sessionId);
-            sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9)); // 방 삭제 시 noti
             return true;
-        }, 10, 100, "Delete sessionInfo ");
-        ThreadUtils.runTask(() -> openViduService.closeSession(sessionId), 10, 100, "Delete openvidu data ");
+        }, 10, 100, "Delete sessionInfo ")
+                .thenApplyAsync(result ->{
+                    if(Boolean.TRUE.equals(result)) {
+                        try {
+                            sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
+                        } catch (Exception e) {
+                            log.error("Unknown Runtime Exception | Message ID: {}, Details: {}", e.getMessage(), e.getStackTrace());
+                        }
+                    }
+                    return result;
+                }, schedulerConfig.scheduledExecutorService())
+                .exceptionally(ex -> {
+                    log.error("Final failure after retries", ex);
+                    return false;
+                });
+
         return true;
     }
 

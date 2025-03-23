@@ -34,13 +34,12 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
 
     @Override
     public void processWebhookEvent(OpenViduWebhookData webhookData) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
-        log.info("====== WebHookData ::: {}", webhookData.toString());
+//        log.info("====== WebHookData ::: {}", webhookData.toString());
 
         String sessionId = webhookData.getSessionId();
         OpenViduDto openViduDto = null;
         try {
             openViduDto = redisUtils.getRedisDataByDataType(sessionId, DataType.OPENVIDU, OpenViduDto.class);
-
         } catch (Exception e) {
             log.warn("Does not Exist ChatRoom or OpenViduData :: {} :: {}", sessionId, e.getMessage());
         }
@@ -80,8 +79,9 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
         try{
             // sse 이벤트 전송
             sseService.notifyChatRoomInfo(chatRoomService.findChatRoomBySessionId(sessionId));
+            sseService.notifyChatRoomList(chatRoomService.getChatRoomList("", 0, 9));
         } catch (Exception e){
-            throw new BadRequestException("Unknown Error :: {}", e);
+            log.error("Runtime Exception | message : {}, Details: {}", e.getMessage(), e.getStackTrace());
         }
 
 
