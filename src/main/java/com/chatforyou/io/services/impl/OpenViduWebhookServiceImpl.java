@@ -79,11 +79,9 @@ public class OpenViduWebhookServiceImpl implements OpenViduWebhookService {
         try{
             // sse 이벤트 전송
             sseService.notifyChatRoomInfo(chatRoomService.findChatRoomBySessionId(sessionId));
-            sseService.notifyChatRoomList(chatRoomService.getChatRoomList("", 0, 9));
         } catch (Exception e){
             log.error("Runtime Exception | message : {}, Details: {}", e.getMessage(), e.getStackTrace());
         }
-
 
         log.info("Delete Participant Connection success");
         log.info("Left User success");
