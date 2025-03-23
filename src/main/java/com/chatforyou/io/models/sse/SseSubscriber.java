@@ -3,6 +3,7 @@ package com.chatforyou.io.models.sse;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Getter
 @Builder(access = AccessLevel.PRIVATE)
+@Slf4j
 public class SseSubscriber {
 
     private final Long userIdx;
@@ -81,10 +83,20 @@ public class SseSubscriber {
      * 이때 스케줄링된 작업이 아직 취소되지 않았다면 취소 처리
      */
     public void cleanupSubscriber() {
-        if (this.scheduledFuture != null && !this.scheduledFuture.isCancelled()) {
-            this.scheduledFuture.cancel(true);
+        if (this.isSseCompleted) {
+            return; // 이미 종료된 경우 즉시 반환
         }
-        this.sseEmitter.complete();
-        this.isSseCompleted = true;
+
+        try {
+            if (this.scheduledFuture != null && !this.scheduledFuture.isCancelled()) {
+                this.scheduledFuture.cancel(true);
+            }
+            this.sseEmitter.complete();
+        } catch (IllegalStateException e) {
+            log.warn("Already Completed SSE Connection : {}", e.getMessage());
+        } finally {
+            this.isSseCompleted = true;
+        }
     }
+
 }
