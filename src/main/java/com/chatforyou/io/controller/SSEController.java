@@ -23,6 +23,11 @@ public class SSEController {
 
     }
 
+    @GetMapping(path = "/user/list/{userIdx}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter notifyUserList(@PathVariable Long userIdx) throws BadRequestException {
+        return sseService.subscribeUserList(userIdx);
+    }
+
     @GetMapping(path = "/chatroom/{sessionId}/user/{userIdx}")
     public SseEmitter notifyChatRoomInfo(@PathVariable String sessionId,
                                          @PathVariable Long userIdx

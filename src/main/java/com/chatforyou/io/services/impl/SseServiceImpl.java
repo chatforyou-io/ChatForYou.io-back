@@ -5,10 +5,8 @@ import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.models.sse.SseSubscriber;
 import com.chatforyou.io.models.sse.SseType;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
-import com.chatforyou.io.services.JwtService;
 import com.chatforyou.io.services.SseService;
 import com.chatforyou.io.services.SseSubscriberService;
-import com.chatforyou.io.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,9 +27,15 @@ public class SseServiceImpl implements SseService {
 
     @Override
     public SseEmitter subscribeRoomList(Long userIdx) {
+        SseSubscriber sseSubscriber = this.createSseSubscriber(userIdx, SseType.ROOM_LIST);
+        sseSubscriberService.addRoomListSubscriber(userIdx, sseSubscriber);
+        return sseSubscriber.getSseEmitter();
+    }
 
-        SseSubscriber sseSubscriber = this.createSseSubscriber(userIdx, "", SseType.ROOM_LIST);
-        sseSubscriberService.addDashboardSubscriber(userIdx, sseSubscriber);
+    @Override
+    public SseEmitter subscribeUserList(Long userIdx) {
+        SseSubscriber sseSubscriber = this.createSseSubscriber(userIdx, SseType.USER_LIST);
+        sseSubscriberService.addUserListSubscriber(userIdx, sseSubscriber);
         return sseSubscriber.getSseEmitter();
     }
 
@@ -45,14 +49,14 @@ public class SseServiceImpl implements SseService {
     @Override
     public void notifyChatRoomList(List<ChatRoomOutVo> chatRoomList) {
         Map<String, List<ChatRoomOutVo>> result = Map.of("data", chatRoomList);
-        sseSubscriberService.getDashboardSubscribers().values()
+        sseSubscriberService.getRoomListSubscribers().values()
                 .forEach((subscriber) -> {
                     try {
                         subscriber.getSseEmitter().send(SseEmitter.event().name("updateChatroomList").data(result));
                         log.debug("notifyChatRoomList To {}", subscriber.getUserIdx());
                     } catch (IOException | RuntimeException e){
                         subscriber.cleanupSubscriber();
-                        sseSubscriberService.removeDashboardSubscriber(subscriber.getUserIdx());
+                        sseSubscriberService.removeRoomListSubscriber(subscriber.getUserIdx());
                     }
                 });
     }
@@ -80,7 +84,7 @@ public class SseServiceImpl implements SseService {
                 "loginUserList", loginUserList // 로그인된 유저
         );
 
-        sseSubscriberService.getDashboardSubscribers().values().forEach(subscriber -> {
+        sseSubscriberService.getUserListSubscribers().values().forEach(subscriber -> {
             try {
                 subscriber.getSseEmitter().send(
                         SseEmitter.event()
@@ -90,7 +94,7 @@ public class SseServiceImpl implements SseService {
                 log.debug("notifyUserList To {}", subscriber.getUserIdx());
             } catch (IOException | RuntimeException e) {
                 subscriber.cleanupSubscriber();
-                sseSubscriberService.removeDashboardSubscriber(subscriber.getUserIdx());
+                sseSubscriberService.removeUserListSubscriber(subscriber.getUserIdx());
             }
         });
     }
@@ -104,12 +108,25 @@ public class SseServiceImpl implements SseService {
         } catch (IOException | RuntimeException e){
             log.error(e.getMessage());
             sseSubscriber.cleanupSubscriber();
-            sseSubscriberService.removeDashboardSubscriber(userIdx);
-            if(!sessionId.isEmpty()) {
-                sseSubscriberService.removeRoomInfoSubscriber(sessionId, sseSubscriber);
+            sseSubscriberService.removeRoomInfoSubscriber(sessionId, sseSubscriber);
+        }
+        return sseSubscriber;
+    }
+
+    private SseSubscriber createSseSubscriber(Long userIdx, SseType type) {
+        SseEmitter sseEmitter = new SseEmitter(type.getTimeOut());
+        SseSubscriber sseSubscriber = SseSubscriber.of(userIdx, sseEmitter, schedulerConfig.scheduledExecutorService());
+        try{
+            sseSubscriber.scheduleKeepAliveTask();
+        } catch (IOException | RuntimeException e){
+            log.error("Runtime error while scheduling keep-alive task for user {}: {}", userIdx, e.getMessage(), e);
+            sseSubscriber.cleanupSubscriber();
+            if(type.equals(SseType.ROOM_INFO)){
+                sseSubscriberService.removeRoomListSubscriber(userIdx);
+            } else if(type.equals(SseType.USER_LIST)){
+                sseSubscriberService.removeUserListSubscriber(userIdx);
             }
         }
-
         return sseSubscriber;
     }
 }

@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface SseService {
     SseEmitter subscribeRoomList(Long userIdx) throws BadRequestException;
+    SseEmitter subscribeUserList(Long userIdx) throws BadRequestException;
     SseEmitter subscribeRoomInfo(Long userIdx, String sessionId) throws BadRequestException;
     void notifyChatRoomList(List<ChatRoomOutVo> chatRoomList) throws BadRequestException;
     void notifyChatRoomInfo(ChatRoomOutVo chatRoomInfo);

@@ -6,6 +6,7 @@ import lombok.Getter;
 public enum SseType {
     ROOM_LIST(180000L),
     ROOM_INFO(3600000L),
+    USER_LIST(180000L),
     ;
 
     private final long timeOut;
