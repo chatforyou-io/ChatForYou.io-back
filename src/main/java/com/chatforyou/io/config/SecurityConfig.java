@@ -50,8 +50,8 @@ public class SecurityConfig {
 	public CorsFilter corsFilter() {
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowCredentials(false);
-		config.setAllowedOriginPatterns(Collections.singletonList("*"));
+		config.setAllowCredentials(true);
+//		config.setAllowedOriginPatterns(Collections.singletonList("*"));
 		config.addAllowedOrigin("*");  // 모든 ip의 응답을 허용
 		config.addAllowedHeader("*");  // 모든 header의 응답을 허용
 		config.addAllowedMethod("*");  // 모든 post, get, delete, patch요청을 허용하겠다
