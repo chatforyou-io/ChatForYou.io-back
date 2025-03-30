@@ -5,8 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.publisher.Flux;
 
 @RestController
 @RequestMapping("/sse")
@@ -17,23 +18,20 @@ public class SSEController {
     private final SseService sseService;
 
     @GetMapping(path = "/chatroom/list/{userIdx}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter notifyChatRoomList(@PathVariable Long userIdx) throws BadRequestException {
-
+    public Flux<ServerSentEvent<?>> notifyChatRoomList(@PathVariable Long userIdx) throws BadRequestException {
         return sseService.subscribeRoomList(userIdx);
 
     }
 
     @GetMapping(path = "/user/list/{userIdx}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter notifyUserList(@PathVariable Long userIdx) throws BadRequestException {
+    public Flux<ServerSentEvent<?>> notifyUserList(@PathVariable Long userIdx) throws BadRequestException {
         return sseService.subscribeUserList(userIdx);
     }
 
     @GetMapping(path = "/chatroom/{sessionId}/user/{userIdx}")
-    public SseEmitter notifyChatRoomInfo(@PathVariable String sessionId,
+    public Flux<ServerSentEvent<?>> notifyChatRoomInfo(@PathVariable String sessionId,
                                          @PathVariable Long userIdx
                                          ) throws BadRequestException {
-
         return sseService.subscribeRoomInfo(userIdx, sessionId);
-
     }
 }

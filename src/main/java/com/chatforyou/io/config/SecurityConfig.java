@@ -12,7 +12,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
-import java.util.Arrays;
+import java.util.Collections;
 
 @Configuration
 @EnableWebSecurity
@@ -50,29 +50,12 @@ public class SecurityConfig {
 	public CorsFilter corsFilter() {
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowCredentials(true);  // 내서버가 응답할때 json을 js에서 처리할 수 있게 설정
+		config.setAllowCredentials(false);
+		config.setAllowedOriginPatterns(Collections.singletonList("*"));
 		config.addAllowedOrigin("*");  // 모든 ip의 응답을 허용
 		config.addAllowedHeader("*");  // 모든 header의 응답을 허용
 		config.addAllowedMethod("*");  // 모든 post, get, delete, patch요청을 허용하겠다
 		source.registerCorsConfiguration("/**", config);
 		return new CorsFilter(source);
 	}
-
-//	@Autowired
-//	public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
-//		auth.inMemoryAuthentication()
-//				.withUser(CALL_USER)
-//				.password("{noop}" + CALL_SECRET)
-//				.roles("ADMIN");
-//	}
-//
-//	@Bean
-//	public UserDetailsService userDetailsService() {
-//		InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
-//		manager.createUser(User.withUsername(CALL_USER)
-//				.password("{noop}" + CALL_SECRET)
-//				.roles("ADMIN")
-//				.build());
-//		return manager;
-//	}
 }

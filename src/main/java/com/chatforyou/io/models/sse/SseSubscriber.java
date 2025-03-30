@@ -1,102 +1,89 @@
 package com.chatforyou.io.models.sse;
 
+import com.chatforyou.io.services.SseSubscriberService;
+import io.micrometer.common.lang.Nullable;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.http.codec.ServerSentEvent;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
-/**
- * 특정 클라이언트(userIdx)와의 SSE(Server-Sent Events) 연결을 관리
- */
 @Getter
-@Builder(access = AccessLevel.PRIVATE)
+@Builder(access = AccessLevel.PRIVATE, toBuilder = true)
 @Slf4j
 public class SseSubscriber {
 
     private final Long userIdx;
-    private final SseEmitter sseEmitter; // sse 전송을 담당하는 객체
-    private boolean isSseCompleted; // sse 전송이 끝났는지 확인
-    private ScheduledFuture<?> scheduledFuture; // 주기적인 작업(keep-alive 메시지 전송)을 관리하는 객체
-    private final ScheduledExecutorService scheduler; // 주기적인 작업을 실행하기 위한 스케줄러
+    private final Sinks.Many<ServerSentEvent<?>> sink;
+    private final Flux<ServerSentEvent<?>> flux;
+    private final SseType sseType;
+    private final String sessionId;
+    private final SseSubscriberService func;
+    private Disposable keepAliveTask;
 
-    public static SseSubscriber of(Long userIdx, SseEmitter emitter, ScheduledExecutorService scheduler) {
+    public static SseSubscriber of(Long userIdx, SseType sseType, @Nullable String sessionId, SseSubscriberService func) {
+        Sinks.Many<ServerSentEvent<?>> sink = Sinks.many().multicast().onBackpressureBuffer();
+
         return builder()
                 .userIdx(userIdx)
-                .sseEmitter(emitter)
-                .scheduler(scheduler)
+                .sink(sink)
+                .sseType(sseType)
+                .sessionId(sessionId)
+                .func(func)
                 .build();
     }
 
-    /**
-     * SSE 연결을 유지하기 위해 주기적으로 keep-alive 메시지를 보내는 작업을 스케줄링
-     * 연결 초기화 시 "connected" 메시지를 클라이언트에게 전송
-     * 연결 확인 시 주기적으로  keep-alive 메시지 전송
-     */
-    public void scheduleKeepAliveTask() throws IOException {
+    public SseSubscriber buildFlux() {
+        Flux<ServerSentEvent<?>> boundFlux = sink.asFlux()
+                .doOnCancel(() -> {
+                    log.debug("[SSE] SSE canceled for user {} in {}", userIdx, sseType);
+                })
+                .doFinally(signal -> {
+                    log.debug("[SSE] SSE finalized for user {} in {} due to {}", userIdx, sseType, signal);
+                    cleanup();
+                });
 
-        notifyConnection();
-
-        // 25초마다 주기적으로 keep-alive 메시지를 전송하는 작업을 스케줄링
-        this.scheduledFuture = this.scheduler.scheduleAtFixedRate(() -> {
-            try {
-                if(this.sseEmitter == null  || this.isSseCompleted) { // sse 객체가 없어졌거나 연결이 종료된 경우 예외처리
-                    throw new RuntimeException();
-                }
-                sendKeepAlive();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }, 15, 15, TimeUnit.SECONDS);
-
-        this.sseEmitter.onCompletion(this::cleanupSubscriber);
-        this.sseEmitter.onTimeout(this::cleanupSubscriber);
-        this.sseEmitter.onError((e) -> cleanupSubscriber());
+        return this.toBuilder().flux(boundFlux).build();
     }
 
-    /**
-     * 클라이언트에게 "connected" 상태를 알리는 메시지를 전송
-     * @throws IOException 메시지 전송 중 에러가 발생한 경우
-     */
-    private void notifyConnection() throws IOException {
-        Map<String, String> result = Map.of("data", "connected");
-        this.sseEmitter.send(SseEmitter.event().name("connectionStatus").data(result));
+    public SseSubscriber startKeepAlive() {
+        this.keepAliveTask = Flux.interval(Duration.ofSeconds(10))
+                .map(i -> ServerSentEvent.<String>builder()
+                        .event("keepAlive")
+                        .data("ping")
+                        .build())
+                .subscribe(event -> {
+                    Sinks.EmitResult result = sink.tryEmitNext(event);
+                    if (result.isFailure()) {
+                        if (result == Sinks.EmitResult.FAIL_TERMINATED) {
+                            log.info("[SSE] KeepAlive emit skipped: connection already terminated for user {}", userIdx);
+                        } else {
+                            log.warn("[SSE] KeepAlive emit failed for user {} :: {}", userIdx, result);
+                        }
+                        this.cleanup();
+                    }
+                }, error -> {
+                    if (error instanceof java.io.IOException) {
+                        log.warn("[SSE] Broken Pipe IOException occurred user: {} :: {}", userIdx, error.getMessage());
+                    } else {
+                        log.error("[SSE] Unknown Server Exception occurred user: {} :: {}", userIdx, error.getMessage());
+                    }
+                    this.cleanup();
+                });
+
+        return this;
     }
 
-    /**
-     * 클라이언트에게 주기적으로 keep-alive 메시지("ping")를 전송하여 SSE 연결 유지
-     * @throws IOException 메시지 전송 중 에러가 발생한 경우
-     */
-    private void sendKeepAlive() throws IOException {
-        Map<String, String> result = Map.of("data", "ping");
-        this.sseEmitter.send(SseEmitter.event().name("keepAlive").data(result));
-    }
-
-    /**
-     * 스케줄링된 작업을 취소하고 SSE 연결을 종료
-     * 이때 스케줄링된 작업이 아직 취소되지 않았다면 취소 처리
-     */
-    public void cleanupSubscriber() {
-        if (this.isSseCompleted) {
-            return; // 이미 종료된 경우 즉시 반환
+    private void cleanup() {
+        if (keepAliveTask != null && !keepAliveTask.isDisposed()) {
+            keepAliveTask.dispose();
         }
-
-        try {
-            if (this.scheduledFuture != null && !this.scheduledFuture.isCancelled()) {
-                this.scheduledFuture.cancel(true);
-            }
-            this.sseEmitter.complete();
-        } catch (IllegalStateException e) {
-            log.warn("Already Completed SSE Connection : {}", e.getMessage());
-        } finally {
-            this.isSseCompleted = true;
-        }
+        sink.tryEmitComplete();
+        func.removeSubscriber(sseType, userIdx, sessionId);
     }
-
 }

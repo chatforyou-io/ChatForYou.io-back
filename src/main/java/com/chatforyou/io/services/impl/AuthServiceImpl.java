@@ -174,7 +174,7 @@ public class AuthServiceImpl implements AuthService {
                     }
                 }, 10, 10, "Delete Login User Info")
                 .thenApplyAsync(result -> {
-                    if (Boolean.FALSE.equals(result)) {
+                    if (Boolean.TRUE.equals(result)) {
                         sendSseEvent();
                     }
                     return result;
@@ -183,7 +183,6 @@ public class AuthServiceImpl implements AuthService {
                     log.error("Final failure after retries", ex);
                     return false;
                 });
-
     }
 
     private void sendSseEvent() {
