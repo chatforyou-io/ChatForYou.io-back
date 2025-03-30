@@ -12,6 +12,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 import java.time.Duration;
+import java.util.Map;
 
 @Getter
 @Builder(access = AccessLevel.PRIVATE, toBuilder = true)
@@ -53,9 +54,9 @@ public class SseSubscriber {
 
     public SseSubscriber startKeepAlive() {
         this.keepAliveTask = Flux.interval(Duration.ofSeconds(10))
-                .map(i -> ServerSentEvent.<String>builder()
+                .map(i -> ServerSentEvent.builder()
                         .event("keepAlive")
-                        .data("ping")
+                        .data(Map.of("data", "ping"))
                         .build())
                 .subscribe(event -> {
                     Sinks.EmitResult result = sink.tryEmitNext(event);

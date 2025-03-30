@@ -92,13 +92,13 @@ public class SseServiceImpl implements SseService {
 
     @Override
     public void notifyUserList(List<UserOutVo> userList, List<UserOutVo> loginUserList) {
-        Map<String, Object> result = Map.of(
+        Map<String, Object> userListData = Map.of(
                 "userList", userList,
                 "loginUserList", loginUserList
         );
         ServerSentEvent<Map<String, Object>> event = ServerSentEvent.<Map<String, Object>>builder()
                 .event("updateUserList")
-                .data(result)
+                .data(Map.of("data", userListData))
                 .build();
 
         sseSubscriberService.getUserListSubscribers().forEach((userId, sink) -> {
