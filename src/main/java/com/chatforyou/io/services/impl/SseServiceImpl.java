@@ -6,8 +6,11 @@ import com.chatforyou.io.models.sse.SseSubscriber;
 import com.chatforyou.io.models.sse.SseType;
 import com.chatforyou.io.services.SseService;
 import com.chatforyou.io.services.SseSubscriberService;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -17,15 +20,20 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class SseServiceImpl implements SseService {
-
     private final SseSubscriberService sseSubscriberService;
+    private final int keepAliveTimeout;
+
+    @Autowired
+    public SseServiceImpl(SseSubscriberService sseSubscriberService, @Value("${sse.keep-alive-timeout:10}") int keepAliveTimeout) {
+        this.sseSubscriberService = sseSubscriberService;
+        this.keepAliveTimeout = keepAliveTimeout;
+    }
 
     @Override
     public Flux<ServerSentEvent<?>> subscribeRoomList(Long userIdx) {
-        SseSubscriber subscriber = SseSubscriber.of(userIdx, SseType.ROOM_LIST, null, sseSubscriberService)
+        SseSubscriber subscriber = SseSubscriber.of(userIdx, SseType.ROOM_LIST, null, sseSubscriberService, this.keepAliveTimeout)
                 .buildFlux()
                 .startKeepAlive();
         sseSubscriberService.addRoomListSubscriber(userIdx, subscriber.getSink());
@@ -34,7 +42,7 @@ public class SseServiceImpl implements SseService {
 
     @Override
     public Flux<ServerSentEvent<?>> subscribeUserList(Long userIdx) {
-        SseSubscriber subscriber = SseSubscriber.of(userIdx, SseType.USER_LIST, null, sseSubscriberService)
+        SseSubscriber subscriber = SseSubscriber.of(userIdx, SseType.USER_LIST, null, sseSubscriberService, this.keepAliveTimeout)
                 .buildFlux()
                 .startKeepAlive();
         sseSubscriberService.addUserListSubscriber(userIdx, subscriber.getSink());
@@ -43,7 +51,7 @@ public class SseServiceImpl implements SseService {
 
     @Override
     public Flux<ServerSentEvent<?>> subscribeRoomInfo(Long userIdx, String roomId) {
-        SseSubscriber subscriber = SseSubscriber.of(userIdx, SseType.ROOM_INFO, roomId, sseSubscriberService)
+        SseSubscriber subscriber = SseSubscriber.of(userIdx, SseType.ROOM_INFO, roomId, sseSubscriberService, this.keepAliveTimeout)
                 .buildFlux()
                 .startKeepAlive();
         sseSubscriberService.addRoomInfoSubscriber(roomId, userIdx, subscriber.getSink());

@@ -26,8 +26,9 @@ public class SseSubscriber {
     private final String sessionId;
     private final SseSubscriberService func;
     private Disposable keepAliveTask;
+    private int keepAliveTimeout;
 
-    public static SseSubscriber of(Long userIdx, SseType sseType, @Nullable String sessionId, SseSubscriberService func) {
+    public static SseSubscriber of(Long userIdx, SseType sseType, @Nullable String sessionId, SseSubscriberService func, int keepAliveTimeout) {
         Sinks.Many<ServerSentEvent<?>> sink = Sinks.many().multicast().onBackpressureBuffer();
 
         return builder()
@@ -36,6 +37,7 @@ public class SseSubscriber {
                 .sseType(sseType)
                 .sessionId(sessionId)
                 .func(func)
+                .keepAliveTimeout(keepAliveTimeout)
                 .build();
     }
 
@@ -53,7 +55,7 @@ public class SseSubscriber {
     }
 
     public SseSubscriber startKeepAlive() {
-        this.keepAliveTask = Flux.interval(Duration.ofSeconds(10))
+        this.keepAliveTask = Flux.interval(Duration.ofSeconds(this.keepAliveTimeout))
                 .map(i -> ServerSentEvent.builder()
                         .event("keepAlive")
                         .data(Map.of("data", "ping"))
