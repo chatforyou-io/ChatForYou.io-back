@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 /**
  * FunctionalInterface 를 이용한 Thread Job 구현
@@ -117,5 +118,40 @@ public class ThreadUtils {
         });
 
         return future; // CompletableFuture 반환
+    }
+
+    /**
+     * Redis 작업을 비동기적으로 실행하고 결과에 따른 후속 작업을 처리하는 공통 메서드
+     *
+     * @param task 실행할 Redis 관련 작업
+     * @param maxRetries 최대 재시도 횟수
+     * @param retryDelayMs 재시도 간격 (밀리초)
+     * @param taskName 작업 이름 (로깅 용도)
+     * @param onSuccess 작업 성공 시 실행할 후속 작업
+     * @return 작업 완료 후 결과를 담은 CompletableFuture
+     */
+    public static CompletableFuture<Boolean> executeAsyncTask(
+            ThreadUtils.Task task,
+            int maxRetries,
+            int retryDelayMs,
+            String taskName,
+            Consumer<Boolean> onSuccess
+    ) {
+        return ThreadUtils.runTask(task, maxRetries, retryDelayMs, taskName)
+                .thenApplyAsync(result -> {
+                    if (Boolean.TRUE.equals(result) && onSuccess != null) {
+                        try {
+                            onSuccess.accept(result);
+                        } catch (Exception e) {
+                            log.error("Unknown Runtime Exception | Message: {}, Details: {}",
+                                    e.getMessage(), e.getStackTrace());
+                        }
+                    }
+                    return result;
+                }, executorService)
+                .exceptionally(ex -> {
+                    log.error("Final failure after retries for task: {}", taskName, ex);
+                    return false;
+                });
     }
 }

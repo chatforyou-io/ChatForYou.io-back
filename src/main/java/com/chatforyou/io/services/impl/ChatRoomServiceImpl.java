@@ -28,7 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
@@ -73,31 +75,31 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         OpenViduDto openViduRoom = openViduService.createOpenViduRoom(chatRoomEntity);
 
         // 5. 새로운 room 저장
-        ThreadUtils.runTask(() -> {
-            try{
-                chatRoomInVo.setRequiredRoomInfo(chatRoomEntity.getSessionId(), userEntity.getNickName(), chatRoomEntity.getCreateDate(), chatRoomEntity.getUpdateDate());
-                redisUtils.createChatRoomJob(chatRoomEntity.getSessionId(), chatRoomInVo, openViduRoom);
-                return true;
-            } catch (Exception e){
-                log.error("Unknown Exception occurred :: {} : {}", e.getMessage(), e.getMessage());
-                return false;
-            }
-        }, 10, 10, "Create ChatRoom")
-                .thenApplyAsync(result -> {
+        ThreadUtils.executeAsyncTask(
+                // Redis 작업
+                () -> {
+                    try {
+                        chatRoomInVo.setRequiredRoomInfo(chatRoomEntity.getSessionId(), userEntity.getNickName(),
+                                chatRoomEntity.getCreateDate(), chatRoomEntity.getUpdateDate());
+                        redisUtils.createChatRoomJob(chatRoomEntity.getSessionId(), chatRoomInVo, openViduRoom);
+                        return true;
+                    } catch (Exception e) {
+                        log.error("Unknown Exception occurred :: {} : {}", e.getMessage(), e.getMessage());
+                        return false;
+                    }
+                },
+                10, 10, "Create ChatRoom",
+                // 성공 시 후속 작업
+                result -> {
                     if(Boolean.TRUE.equals(result)) {
                         try {
                             sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
                         } catch (Exception e) {
-                            log.error("Unknown Runtime Exception | Message : {} | Details : {}", e.getMessage(), e.getStackTrace());
+                            log.error("Unknown Runtime Exception | Message ID: {}, Details: {}", e.getMessage(), e.getStackTrace());
                         }
                     }
-
-                    return result;
-                }, schedulerConfig.scheduledExecutorService())
-                .exceptionally(ex -> {
-                    log.error("Final failure after retries", ex);
-                    return false;
-                });
+                }
+        );
 
         return ChatRoomOutVo.of(chatRoomEntity, 0);
     }
@@ -162,8 +164,10 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         List userList = redisUtils.getRedisDataByDataType(sessionId, DataType.USER_LIST, List.class);
         ChatRoomOutVo roomInfo = ChatRoomOutVo.of(chatRoom, userList, currentUserCount);
 
-        // Redis 저장을 thread 에서 하도록
-        ThreadUtils.runTask(() -> {
+        // 참여 유저 정보 update
+        ThreadUtils.executeAsyncTask(
+                // Redis 작업
+                () -> {
                     try {
                         redisUtils.joinUserJob(sessionId, UserOutVo.of(joinUser, false), openViduDto);
                         return true;
@@ -172,8 +176,10 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                                 sessionId, e.getStackTrace());
                         return false;
                     }
-                }, 10, 10, "Join User")
-                .thenApplyAsync(jobResult -> {
+                },
+                10, 10, "Join User",
+                // 성공 시 후속 작업
+                jobResult -> {
                     if (Boolean.TRUE.equals(jobResult)) {
                         try {
                             sseService.notifyChatRoomInfo(roomInfo);
@@ -182,12 +188,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                             log.error("Unknown Runtime Exception | Message ID: {}, Details: {}", e.getMessage(), e.getStackTrace());
                         }
                     }
-                    return jobResult;
-                }, schedulerConfig.scheduledExecutorService())
-                .exceptionally(ex -> {
-                    log.error("Final failure after retries", ex);
-                    return false;
-                });
+                }
+        );
 
 
         result.put("roomInfo", roomInfo);
@@ -281,25 +283,25 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             log.info("===== Already Deleted ChatRoom ====");
         }
 
-        ThreadUtils.runTask(() -> {
-            openViduService.closeSession(sessionId);
-            redisUtils.deleteKeysByStr(sessionId);
-            return true;
-        }, 10, 100, "Delete sessionInfo ")
-                .thenApplyAsync(result ->{
-                    if(Boolean.TRUE.equals(result)) {
-                        try {
+        ThreadUtils.executeAsyncTask(
+                // Redis 작업
+                () -> {
+                    openViduService.closeSession(sessionId);
+                    redisUtils.deleteKeysByStr(sessionId);
+                    return true;
+                },
+                10, 100, "Delete sessionInfo",
+                // 성공 시 후속 작업
+                jobResult -> {
+                    try {
+                        if (Boolean.TRUE.equals(jobResult)) {
                             sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
-                        } catch (Exception e) {
-                            log.error("Unknown Runtime Exception | Message ID: {}, Details: {}", e.getMessage(), e.getStackTrace());
                         }
+                    } catch (BadRequestException e) {
+                        throw new RuntimeException(e);
                     }
-                    return result;
-                }, schedulerConfig.scheduledExecutorService())
-                .exceptionally(ex -> {
-                    log.error("Final failure after retries", ex);
-                    return false;
-                });
+                }
+        );
 
         return true;
     }

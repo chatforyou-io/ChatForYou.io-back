@@ -136,7 +136,9 @@ public class AuthServiceImpl implements AuthService {
      * @param user
      */
     private void userRedisJob(UserOutVo user) {
-        ThreadUtils.runTask(() -> {
+        ThreadUtils.executeAsyncTask(
+                // 실행할 작업
+                () -> {
                     try {
                         redisUtils.saveLoginUser(user);
                         // 유저 데이터 유효시간 업데이트
@@ -145,17 +147,15 @@ public class AuthServiceImpl implements AuthService {
                     } catch (Exception e) {
                         return false;
                     }
-                }, 10, 10, "Save Login User Info")
-                .thenApplyAsync(result -> {
-                    if (Boolean.TRUE.equals(result)) {
+                },
+                10, 10, "Save Login User Info",
+                // 성공 시 후속 작업
+                result -> {
+                    if(Boolean.TRUE.equals(result)) {
                         sendSseEvent();
                     }
-                    return result;
-                }, schedulerConfig.scheduledExecutorService())
-                .exceptionally(ex -> {
-                    log.error("Final failure after retries", ex);
-                    return false;
-                });
+                }
+        );
     }
 
     @Override
@@ -164,7 +164,9 @@ public class AuthServiceImpl implements AuthService {
             throw new EntityNotFoundException("Can not find user info");
         }
 
-        ThreadUtils.runTask(() -> {
+        ThreadUtils.executeAsyncTask(
+                // 실행할 작업
+                () -> {
                     try {
                         redisUtils.deleteLoginUser(user.getIdx());
                         return true;
@@ -172,17 +174,15 @@ public class AuthServiceImpl implements AuthService {
                         log.error("=== Unknown Exception :: {}", e.getMessage(), e);
                         return false;
                     }
-                }, 10, 10, "Delete Login User Info")
-                .thenApplyAsync(result -> {
-                    if (Boolean.TRUE.equals(result)) {
+                },
+                10, 10, "Delete Login User Info",
+                // 성공 시 후속 작업
+                result -> {
+                    if(Boolean.TRUE.equals(result)) {
                         sendSseEvent();
                     }
-                    return result;
-                }, schedulerConfig.scheduledExecutorService())
-                .exceptionally(ex -> {
-                    log.error("Final failure after retries", ex);
-                    return false;
-                });
+                }
+        );
     }
 
     private void sendSseEvent() {
