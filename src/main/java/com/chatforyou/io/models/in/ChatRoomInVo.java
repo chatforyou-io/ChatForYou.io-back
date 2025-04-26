@@ -1,8 +1,8 @@
 package com.chatforyou.io.models.in;
 
+import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
-
 import java.util.Date;
 import java.util.Objects;
 
@@ -45,6 +45,21 @@ public class ChatRoomInVo {
                 .desc(Objects.isNull(newChatRoomInVo.getDesc()) ? chatRoomInVo.getDesc() : newChatRoomInVo.getDesc())
                 .createDate(chatRoomInVo.getCreateDate())
                 .updateDate(new Date().getTime())
+                .build();
+    }
+
+    public static ChatRoomInVo of(ChatRoomOutVo chatRoomOutVo){
+        return ChatRoomInVo.builder()
+                .sessionId(chatRoomOutVo.getSessionId())
+                .userIdx(chatRoomOutVo.getUserIdx())
+                .roomName(chatRoomOutVo.getRoomName())
+                .usePwd(Boolean.TRUE.equals(chatRoomOutVo.getUsePwd()))
+                .pwd(chatRoomOutVo.getPwd())
+                .usePrivate(Boolean.TRUE.equals(chatRoomOutVo.getUsePrivate()))
+                .maxUserCount(Objects.isNull(chatRoomOutVo.getMaxUserCount()) ? 0 : chatRoomOutVo.getMaxUserCount())
+                .desc(chatRoomOutVo.getDesc())
+                .createDate(chatRoomOutVo.getCreateDate())
+                .updateDate(chatRoomOutVo.getUpdateDate())
                 .build();
     }
 }

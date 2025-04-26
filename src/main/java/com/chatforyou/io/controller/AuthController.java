@@ -1,16 +1,12 @@
 package com.chatforyou.io.controller;
 
-import com.chatforyou.io.client.OpenViduHttpException;
-import com.chatforyou.io.client.OpenViduJavaClientException;
-import com.chatforyou.io.client.Recording;
-import com.chatforyou.io.config.SecurityConfig;
-import com.chatforyou.io.models.AdminSessionData;
 import com.chatforyou.io.models.JwtPayload;
 import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.models.in.SocialUserInVo;
 import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.services.*;
+import com.chatforyou.io.utils.AuthUtils;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,6 +31,7 @@ public class AuthController {
 	private final MailService mailService;
 	private final AuthService authService;
 	private final JwtService jwtService;
+	private final AuthUtils authUtils;
 
 	/**
 	 * 사용자 로그인 처리 메서드
@@ -102,7 +99,7 @@ public class AuthController {
 			@RequestParam("email") String email,
 			HttpServletResponse response) throws MessagingException, UnsupportedEncodingException, BadRequestException {
 		// 이메일 중복 체크
-		boolean isDuplicate = authService.validateStrByType(ValidateType.ID, email);
+		boolean isDuplicate = authUtils.validateStrByType(ValidateType.ID, email);
 		if (isDuplicate) {
 			throw new BadRequestException("already exist user ID");
 		}

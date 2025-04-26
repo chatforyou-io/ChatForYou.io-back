@@ -17,5 +17,4 @@ public interface AuthService {
     UserOutVo getLoginUserInfo(String id, String pwd);
     UserOutVo getSocialLoginUserInfo(SocialUserInVo socialUser) throws BadRequestException;
     void logoutUser(UserInVo user);
-    boolean validateStrByType(ValidateType type, String str)  throws BadRequestException;
 }

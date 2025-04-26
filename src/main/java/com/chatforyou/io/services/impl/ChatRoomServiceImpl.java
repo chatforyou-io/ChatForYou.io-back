@@ -3,6 +3,7 @@ package com.chatforyou.io.services.impl;
 import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
+import com.chatforyou.io.config.SchedulerConfig;
 import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.*;
@@ -12,9 +13,10 @@ import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
 import com.chatforyou.io.repository.ChatRoomRepository;
 import com.chatforyou.io.repository.UserRepository;
-import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.ChatRoomService;
 import com.chatforyou.io.services.OpenViduService;
+import com.chatforyou.io.services.SseService;
+import com.chatforyou.io.utils.AuthUtils;
 import com.chatforyou.io.utils.RedisUtils;
 import com.chatforyou.io.utils.ThreadUtils;
 import io.github.dengliming.redismodule.redisearch.index.Document;
@@ -26,7 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
@@ -35,9 +39,11 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final UserRepository userRepository;
-    private final AuthService authService;
     private final OpenViduService openViduService;
     private final RedisUtils redisUtils;
+    private final AuthUtils authUtils;
+    private final SseService sseService;
+    private final SchedulerConfig schedulerConfig;
 
     @Override
     @Transactional // 에러가 발생할 시 rollback 될 수 있도록 @Transactional 사용
@@ -69,16 +75,31 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         OpenViduDto openViduRoom = openViduService.createOpenViduRoom(chatRoomEntity);
 
         // 5. 새로운 room 저장
-        ThreadUtils.runTask(() -> {
-            try{
-                chatRoomInVo.setRequiredRoomInfo(chatRoomEntity.getSessionId(), userEntity.getNickName(), chatRoomEntity.getCreateDate(), chatRoomEntity.getUpdateDate());
-                redisUtils.createChatRoomJob(chatRoomEntity.getSessionId(), chatRoomInVo, openViduRoom);
-                return true;
-            } catch (Exception e){
-                log.error("Unknown Exception occurred :: {} : {}", e.getMessage(), e);
-                return false;
-            }
-        }, 10, 10, "Create ChatRoom");
+        ThreadUtils.executeAsyncTask(
+                // Redis 작업
+                () -> {
+                    try {
+                        chatRoomInVo.setRequiredRoomInfo(chatRoomEntity.getSessionId(), userEntity.getNickName(),
+                                chatRoomEntity.getCreateDate(), chatRoomEntity.getUpdateDate());
+                        redisUtils.createChatRoomJob(chatRoomEntity.getSessionId(), chatRoomInVo, openViduRoom);
+                        return true;
+                    } catch (Exception e) {
+                        log.error("Unknown Exception occurred :: {} : {}", e.getMessage(), e.getMessage());
+                        return false;
+                    }
+                },
+                10, 10, "Create ChatRoom",
+                // 성공 시 후속 작업
+                result -> {
+                    if(Boolean.TRUE.equals(result)) {
+                        try {
+                            sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
+                        } catch (Exception e) {
+                            log.error("Unknown Runtime Exception | Message ID: {}, Details: {}", e.getMessage(), e.getStackTrace());
+                        }
+                    }
+                }
+        );
 
         return ChatRoomOutVo.of(chatRoomEntity, 0);
     }
@@ -140,21 +161,38 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
 
         OpenViduDto openViduDto = openViduService.joinOpenviduRoom(sessionId, joinUser);
-
-        // Redis 저장을 thread 에서 하도록
-        ThreadUtils.runTask(() -> {
-            try {
-                redisUtils.joinUserJob(sessionId, UserOutVo.of(joinUser, false), openViduDto);
-                return true;
-            } catch (Exception e) {
-                log.error("Unknown Exception :: {} : {}", e.getMessage(), e);
-                return false;
-            }
-        }, 10, 10, "Join User");
-
-
         List userList = redisUtils.getRedisDataByDataType(sessionId, DataType.USER_LIST, List.class);
-        result.put("roomInfo", ChatRoomOutVo.of(chatRoom, userList, currentUserCount));
+        ChatRoomOutVo roomInfo = ChatRoomOutVo.of(chatRoom, userList, currentUserCount);
+
+        // 참여 유저 정보 update
+        ThreadUtils.executeAsyncTask(
+                // Redis 작업
+                () -> {
+                    try {
+                        redisUtils.joinUserJob(sessionId, UserOutVo.of(joinUser, false), openViduDto);
+                        return true;
+                    } catch (Exception e) {
+                        log.error("Redis 작업 중 예상치 못한 오류 발생 | Session ID: {}, Details: {}",
+                                sessionId, e.getStackTrace());
+                        return false;
+                    }
+                },
+                10, 10, "Join User",
+                // 성공 시 후속 작업
+                jobResult -> {
+                    if (Boolean.TRUE.equals(jobResult)) {
+                        try {
+                            sseService.notifyChatRoomInfo(roomInfo);
+                            sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
+                        } catch (Exception e) {
+                            log.error("Unknown Runtime Exception | Message ID: {}, Details: {}", e.getMessage(), e.getStackTrace());
+                        }
+                    }
+                }
+        );
+
+
+        result.put("roomInfo", roomInfo);
         tokens.put("camera_token", openViduDto.getSession().getConnections().get("con_camera_"+userIdx).getToken());
         tokens.put("screen_token", openViduDto.getSession().getConnections().get("con_screen_"+userIdx).getToken());
         result.put("joinUserInfo", tokens);
@@ -245,8 +283,26 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             log.info("===== Already Deleted ChatRoom ====");
         }
 
-        ThreadUtils.runTask(() -> redisUtils.deleteKeysByStr(sessionId), 10, 100, "Delete sessionInfo ");
-        ThreadUtils.runTask(() -> openViduService.closeSession(sessionId), 10, 100, "Delete openvidu data ");
+        ThreadUtils.executeAsyncTask(
+                // Redis 작업
+                () -> {
+                    openViduService.closeSession(sessionId);
+                    redisUtils.deleteKeysByStr(sessionId);
+                    return true;
+                },
+                10, 100, "Delete sessionInfo",
+                // 성공 시 후속 작업
+                jobResult -> {
+                    try {
+                        if (Boolean.TRUE.equals(jobResult)) {
+                            sseService.notifyChatRoomList(this.getChatRoomList("", 0, 9));
+                        }
+                    } catch (BadRequestException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+        );
+
         return true;
     }
 
@@ -259,7 +315,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             throw new BadRequestException("User Count must be at least 2");
         }
 
-        if (authService.validateStrByType(ValidateType.CHATROOM_NAME, chatRoomInVo.getRoomName())) {
+        if (authUtils.validateStrByType(ValidateType.CHATROOM_NAME, chatRoomInVo.getRoomName())) {
             throw new BadRequestException("already exist room");
         }
     }

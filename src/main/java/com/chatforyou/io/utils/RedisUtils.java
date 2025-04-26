@@ -457,6 +457,11 @@ public class RedisUtils {
         masterTemplate.opsForHash().put(redisKey, "nickName", user.getNickName());
     }
 
+    public void deleteLoginUser(Long userIdx) {
+        String redisKey = "user:" + userIdx;
+        masterTemplate.delete(redisKey);
+    }
+
     public void saveRefreshToken(Long userIdx, String refreshToken) {
         // redisKey = user:userIdx
         String redisKey = "user:" + userIdx;
@@ -471,11 +476,6 @@ public class RedisUtils {
         masterTemplate.opsForHash().put(redisKey, "token_update_time", new Date().getTime());
         // 유저 데이터 유효시간 업데이트
         masterTemplate.expire(redisKey, REDIS_TIMEOUT, TimeUnit.DAYS);
-    }
-
-    public void deleteLoginUser(Long userIdx) {
-        String redisKey = "user:" + userIdx;
-        masterTemplate.delete(redisKey);
     }
 
     public void deleteInactiveUsers() {

@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ToString
-@JsonIgnoreProperties({"pwd"})
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatRoomOutVo implements Serializable {
     private static final long serialVersionUID = 1L;
     private Long userIdx;
@@ -24,6 +24,7 @@ public class ChatRoomOutVo implements Serializable {
     private Boolean usePwd;
     private Boolean usePrivate;
     private Boolean useRtc;
+    private String desc;
     @Setter
     private Integer currentUserCount;
     private Integer maxUserCount;
@@ -77,6 +78,23 @@ public class ChatRoomOutVo implements Serializable {
                 .maxUserCount(chatRoomInVo.getMaxUserCount())
                 .createDate(chatRoomInVo.getCreateDate())
                 .updateDate(chatRoomInVo.getUpdateDate())
+                .build();
+    }
+
+    public static ChatRoomOutVo updateOf(ChatRoomOutVo chatRoom, List<UserOutVo> userList, int currentUserCount){
+        return ChatRoomOutVo.builder()
+                .sessionId(chatRoom.getSessionId())
+                .creator(chatRoom.getCreator())
+                .userIdx(chatRoom.getUserIdx())
+                .roomName(chatRoom.getRoomName())
+                .usePwd(chatRoom.getUsePwd())
+                .usePrivate(chatRoom.getUsePrivate())
+                .useRtc(chatRoom.getUseRtc())
+                .currentUserCount(currentUserCount)
+                .maxUserCount(chatRoom.getMaxUserCount())
+                .userList(userList)
+                .createDate(chatRoom.getCreateDate())
+                .updateDate(chatRoom.getUpdateDate())
                 .build();
     }
 }

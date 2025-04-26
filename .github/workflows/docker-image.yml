@@ -2,7 +2,7 @@ name: Docker CI/CD
 
 on:
   push:
-    branches: [ "master", "infra/cicd-test" ]
+    branches: [ "master", "infra/cicd-test"]
 #  pull_request:
 #    branches: [ "master" ]
 
