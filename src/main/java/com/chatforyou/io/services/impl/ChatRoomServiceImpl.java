@@ -3,7 +3,6 @@ package com.chatforyou.io.services.impl;
 import ch.qos.logback.core.util.StringUtil;
 import com.chatforyou.io.client.OpenViduHttpException;
 import com.chatforyou.io.client.OpenViduJavaClientException;
-import com.chatforyou.io.config.SchedulerConfig;
 import com.chatforyou.io.entity.ChatRoom;
 import com.chatforyou.io.entity.User;
 import com.chatforyou.io.models.*;
@@ -11,7 +10,6 @@ import com.chatforyou.io.models.in.ChatRoomInVo;
 import com.chatforyou.io.models.out.ChatRoomOutVo;
 import com.chatforyou.io.models.out.ConnectionOutVo;
 import com.chatforyou.io.models.out.UserOutVo;
-import com.chatforyou.io.repository.ChatRoomRepository;
 import com.chatforyou.io.repository.UserRepository;
 import com.chatforyou.io.services.ChatRoomService;
 import com.chatforyou.io.services.OpenViduService;
@@ -28,22 +26,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ChatRoomServiceImpl implements ChatRoomService {
 
-    private final ChatRoomRepository chatRoomRepository;
     private final UserRepository userRepository;
     private final OpenViduService openViduService;
     private final RedisUtils redisUtils;
     private final AuthUtils authUtils;
     private final SseService sseService;
-    private final SchedulerConfig schedulerConfig;
 
     @Override
     @Transactional // 에러가 발생할 시 rollback 될 수 있도록 @Transactional 사용
@@ -67,9 +61,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
         // 2. entity 로 변환
         ChatRoom chatRoomEntity = ChatRoom.of(chatRoomInVo, userEntity);
-
-        // 4. 저장
-        chatRoomRepository.saveAndFlush(chatRoomEntity);
 
         // 3. openvidu 방생성
         OpenViduDto openViduRoom = openViduService.createOpenViduRoom(chatRoomEntity);
@@ -138,8 +129,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         Map<String, Object> result = new LinkedHashMap<>();
         Map<String, String> tokens = new HashMap<>();
 
-        ChatRoom chatRoomEntity = chatRoomRepository.findChatRoomBySessionId(sessionId)
-                .orElseThrow(() -> new EntityNotFoundException("Can not find ChatRoom"));
         User joinUser = userRepository.findUserByIdx(userIdx)
                 .orElseThrow(() -> new EntityNotFoundException("Can not find user"));
 
@@ -149,14 +138,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
 
         // redis 에서 chatroom 정보 확인
-        Map<Object, Object> allChatRoomData = redisUtils.getAllChatRoomData(sessionId);
-        if (allChatRoomData.isEmpty() || allChatRoomData.get(DataType.CHATROOM.getType()) == null) {
+        ChatRoomInVo chatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomInVo.class);
+        if (chatRoom == null) {
             throw new BadRequestException("Can not find ChatRoom");
         }
-        ChatRoomInVo chatRoom = (ChatRoomInVo) allChatRoomData.get(DataType.CHATROOM.getType());
-        Integer currentUserCount = (Integer) allChatRoomData.get(DataType.USER_COUNT.getType());
-        currentUserCount = currentUserCount == null ? 1 : currentUserCount+1;
-        if (chatRoomEntity.getMaxUserCount() < currentUserCount) {
+        // redis 에서 현재 유저 count 확인
+        int currentUserCount = redisUtils.getUserCount(sessionId);
+        Integer maxUserCount = chatRoom.getMaxUserCount();
+        if (maxUserCount < currentUserCount) {
             throw new BadRequestException("Max User count");
         }
 
@@ -246,11 +235,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     @Override
     @Transactional
     public ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo newChatRoomInVo, JwtPayload jwtPayload) throws BadRequestException {
-        ChatRoom chatRoomEntity = chatRoomRepository.findChatRoomBySessionId(sessionId)
-                .orElseThrow(() -> new EntityNotFoundException("Can not find ChatRoom"));
-
-        ChatRoom newChatRoomEntity = ChatRoom.ofUpdate(chatRoomEntity, newChatRoomInVo);
-        chatRoomRepository.saveAndFlush(newChatRoomEntity);
 
         ChatRoomInVo redisChatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomInVo.class);
         if (!Objects.equals(redisChatRoom.getUserIdx(), jwtPayload.getIdx())) {
@@ -271,16 +255,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             if (!Objects.equals(redisChatRoom.getUserIdx(), jwtPayload.getIdx())) {
                 throw new BadRequestException("The user ID in the token does not match the user ID provided in the chat room information.");
             }
-        }
-
-        if (chatRoomRepository.findChatRoomBySessionId(sessionId).isPresent()) {
-            boolean result = chatRoomRepository.deleteChatRoomBySessionId(sessionId) == 1;
-            if (!result) {
-                log.error("Can not delete ChatRoom ==> sessionID :: {}", sessionId);
-                throw new RuntimeException("Can not delete ChatRoom");
-            }
-        } else {
-            log.info("===== Already Deleted ChatRoom ====");
         }
 
         ThreadUtils.executeAsyncTask(
