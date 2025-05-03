@@ -23,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,7 +39,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final SseService sseService;
 
     @Override
-    @Transactional // 에러가 발생할 시 rollback 될 수 있도록 @Transactional 사용
     public ChatRoomOutVo createChatRoom(ChatRoomInVo chatRoomInVo, JwtPayload jwtPayload) throws BadRequestException {
         // 1. 데이터 검증
         checkChatRoomValidate(chatRoomInVo);
@@ -233,7 +231,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    @Transactional
     public ChatRoomOutVo updateChatRoom(String sessionId, ChatRoomInVo newChatRoomInVo, JwtPayload jwtPayload) throws BadRequestException {
 
         ChatRoomInVo redisChatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomInVo.class);
@@ -248,7 +245,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    @Transactional
     public boolean deleteChatRoom(String sessionId, JwtPayload jwtPayload, boolean isSystem) throws BadRequestException {
         if (!isSystem) {
             ChatRoomInVo redisChatRoom = redisUtils.getRedisDataByDataType(sessionId, DataType.CHATROOM, ChatRoomInVo.class);
