@@ -141,7 +141,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             throw new BadRequestException("Can not find ChatRoom");
         }
         // redis 에서 현재 유저 count 확인
-        int currentUserCount = redisUtils.getUserCount(sessionId);
+        int currentUserCount = redisUtils.getUserCount(sessionId) + 1;
         Integer maxUserCount = chatRoom.getMaxUserCount();
         if (maxUserCount < currentUserCount) {
             throw new BadRequestException("Max User count");
