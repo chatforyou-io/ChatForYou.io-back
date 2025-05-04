@@ -217,33 +217,125 @@ public class RedisUtils {
         List<String> sessionList = new ArrayList<>();
         ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
 
-        Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options);
-
-        while (cursor.hasNext()) {
-            String key = new String(cursor.next()).replace("\"", "").replace("sessionId:", "");
-            if (key.contains("userList")) {
-                continue;
+        try (Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options)) {
+            while (cursor.hasNext()) {
+                String key = cleanKey(new String(cursor.next()));
+                if (key.contains("userList")) {
+                    continue;
+                }
+                int userCount = this.getUserCount(key);
+                if (0 == userCount) {
+                    sessionList.add(key);
+                    continue;
+                }
+                List userList = this.getRedisDataByDataType(key, DataType.USER_LIST, List.class);
+                if (CollectionUtils.isEmpty(userList)) {
+                    sessionList.add(key);
+                }
             }
-            int userCount = this.getUserCount(key);
-            if (0 == userCount) {
-                sessionList.add(key);
-                continue;
-            }
-            List userList = this.getRedisDataByDataType(key, DataType.USER_LIST, List.class);
-            if (CollectionUtils.isEmpty(userList)) {
-                sessionList.add(key);
-            }
-
+        } catch (Exception e) {
+            log.error("Error scanning Redis keys: ", e);
+            throw new BadRequestException("Failed to get delete session list: " + e.getMessage());
         }
 
         return sessionList;
+    }
+
+    /**
+     * currentUserCount 가 maxUserCount 보다 큰 sessionId 들을 검색한다
+     *
+     * @return List<String> - currentUserCount > maxUserCount인 키들의 목록
+     */
+    public List<String> getSessionListForOverflow() throws BadRequestException {
+        String pattern = "*sessionId:" + "*";
+        List<String> sessionList = new ArrayList<>();
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
+
+        try (Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options)) {
+            while (cursor.hasNext()) {
+                String key = cleanKey(new String(cursor.next()));
+                if (key.contains("userList")) {
+                    continue;
+                }
+
+                try {
+                    ChatRoomInVo chatRoomInVo = this.getRedisDataByDataType(key, DataType.CHATROOM, ChatRoomInVo.class);
+                    if (chatRoomInVo == null) {
+                        continue;
+                    }
+
+                    int maxUserCount = chatRoomInVo.getMaxUserCount();
+                    int currentUserCount = this.getUserCount(key);
+
+                    if (currentUserCount > maxUserCount && maxUserCount > 0) {
+                        sessionList.add(key);
+                    }
+                } catch (Exception e) {
+                    log.error("Error processing key: " + key, e);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error scanning Redis keys: ", e);
+            throw new BadRequestException("Failed to get overflow session list: " + e.getMessage());
+        }
+
+        return sessionList;
+    }
+
+    /**
+     * 레디스에 있는 전체 sessionId 를 가져와 현재 활성화된 sessionId 와 비교한다.
+     *
+     * @return List<String> - inactive 된 sessionId 목록
+     */
+    public List<String> getSessionListForInactive(List<String> activeSessionList) throws BadRequestException {
+        String pattern = "sessionId:" + "*";
+        List<String> sessionList = new ArrayList<>();
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
+
+        // 검색 성능 향상을 위해 activeSessionList를 HashSet으로 변환
+        Set<String> activeSessionSet = new HashSet<>(activeSessionList);
+
+        try (Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options)) {
+            while (cursor.hasNext()) {
+                try {
+                    String key = cleanKey(new String(cursor.next()));
+                    if (key.contains("userList")) {
+                        continue;
+                    }
+
+                    // activeSessionSet에 포함되지 않은 sessionId만 추가
+                    if (!activeSessionSet.contains(key)) {
+                        sessionList.add(key);
+                    }
+                } catch (Exception e) {
+                    // 개별 키 처리 중 오류 발생 시 로그 기록 후 계속 진행
+                    log.error("Error processing key in getSessionListForInactive: {}", e.getMessage(), e);
+                }
+            }
+        } catch (Exception e) {
+            // 전체 스캔 과정에서 오류 발생 시 로그 기록 후 예외 발생
+            log.error("Error scanning Redis keys in getSessionListForInactive: {}", e.getMessage(), e);
+            throw new BadRequestException("Failed to get inactive session list: " + e.getMessage());
+        }
+
+        return sessionList;
+    }
+
+    /**
+     * 불필요한 문자를 제거하여 주어진 Redis 키를 정리합니다.
+     *
+     * @param key 원본 키
+     * @return 정리된 키
+     */
+    private String cleanKey(String key) {
+        return key.replace("\"", "").replace("sessionId:", "");
     }
 
     public boolean deleteKeysByStr(String str) {
         String pattern = "*" + str + "*";
         try {
             // SCAN 명령어를 사용하여 키 검색 및 삭제
-            ScanOptions scanOptions = ScanOptions.scanOptions().match(pattern).count(10).build();
+            ScanOptions scanOptions = ScanOptions.scanOptions().match(pattern).count(100).build();
 
             List<String> keysToDelete = new ArrayList<>();
             try (Cursor<byte[]> cursor = slaveTemplate.execute(
