@@ -34,6 +34,7 @@ public class BatchJob {
         int failCount = 0;
 
         try {
+            // TODO 아래 3가지 로직은 중복되는 부분 존재, 추후 리팩토링 필요
             List<String> emptyRooms = redisUtils.getSessionListForDelete(); // 사용자가 0 인 세션 확인
             List<String> overflowRooms = redisUtils.getSessionListForOverflow(); // 현재 사용자 수가 최대 유저 수보다 많은 세션 확인
             List<String> activeSessionList = openViduService.getActiveSessionOutVoList()

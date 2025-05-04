@@ -217,22 +217,25 @@ public class RedisUtils {
         List<String> sessionList = new ArrayList<>();
         ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
 
-        Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options);
-
-        while (cursor.hasNext()) {
-            String key = new String(cursor.next()).replace("\"", "").replace("sessionId:", "");
-            if (key.contains("userList")) {
-                continue;
+        try (Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options)) {
+            while (cursor.hasNext()) {
+                String key = cleanKey(new String(cursor.next()));
+                if (key.contains("userList")) {
+                    continue;
+                }
+                int userCount = this.getUserCount(key);
+                if (0 == userCount) {
+                    sessionList.add(key);
+                    continue;
+                }
+                List userList = this.getRedisDataByDataType(key, DataType.USER_LIST, List.class);
+                if (CollectionUtils.isEmpty(userList)) {
+                    sessionList.add(key);
+                }
             }
-            int userCount = this.getUserCount(key);
-            if (0 == userCount) {
-                sessionList.add(key);
-                continue;
-            }
-            List userList = this.getRedisDataByDataType(key, DataType.USER_LIST, List.class);
-            if (CollectionUtils.isEmpty(userList)) {
-                sessionList.add(key);
-            }
+        } catch (Exception e) {
+            log.error("Error scanning Redis keys: ", e);
+            throw new BadRequestException("Failed to get delete session list: " + e.getMessage());
         }
 
         return sessionList;
@@ -248,32 +251,32 @@ public class RedisUtils {
         List<String> sessionList = new ArrayList<>();
         ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
 
-        Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options);
-
-        while (cursor.hasNext()) {
-            String key = new String(cursor.next()).replace("\"", "").replace("sessionId:", "");
-            if (key.contains("userList")) {
-                continue;
-            }
-
-            try {
-                ChatRoomInVo chatRoomInVo = this.getRedisDataByDataType(key, DataType.CHATROOM, ChatRoomInVo.class);
-                if (chatRoomInVo == null) {
-                    continue;  // ChatRoomInVo가 null인 경우 다음 키로 넘어감
+        try (Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options)) {
+            while (cursor.hasNext()) {
+                String key = cleanKey(new String(cursor.next()));
+                if (key.contains("userList")) {
+                    continue;
                 }
 
-                int maxUserCount = chatRoomInVo.getMaxUserCount();
-                int currentUserCount = this.getUserCount(key);
+                try {
+                    ChatRoomInVo chatRoomInVo = this.getRedisDataByDataType(key, DataType.CHATROOM, ChatRoomInVo.class);
+                    if (chatRoomInVo == null) {
+                        continue;
+                    }
 
-                // currentUserCount 가 maxUserCount 보다 큰 경우만 목록에 추가
-                // maxUserCount가 0인 경우는 유효하지 않은 설정으로 간주하여 제외
-                if (currentUserCount > maxUserCount && maxUserCount > 0) {
-                    sessionList.add(key);
+                    int maxUserCount = chatRoomInVo.getMaxUserCount();
+                    int currentUserCount = this.getUserCount(key);
+
+                    if (currentUserCount > maxUserCount && maxUserCount > 0) {
+                        sessionList.add(key);
+                    }
+                } catch (Exception e) {
+                    log.error("Error processing key: " + key, e);
                 }
-            } catch (Exception e) {
-                // 예외 발생 시 로그 기록 및 계속 진행
-                log.error("Error processing key: " + key, e);
             }
+        } catch (Exception e) {
+            log.error("Error scanning Redis keys: ", e);
+            throw new BadRequestException("Failed to get overflow session list: " + e.getMessage());
         }
 
         return sessionList;
@@ -292,12 +295,10 @@ public class RedisUtils {
         // 검색 성능 향상을 위해 activeSessionList를 HashSet으로 변환
         Set<String> activeSessionSet = new HashSet<>(activeSessionList);
 
-        try {
-            Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options);
-
+        try (Cursor<byte[]> cursor = slaveTemplate.getConnectionFactory().getConnection().scan(options)) {
             while (cursor.hasNext()) {
                 try {
-                    String key = new String(cursor.next()).replace("\"", "").replace("sessionId:", "");
+                    String key = cleanKey(new String(cursor.next()));
                     if (key.contains("userList")) {
                         continue;
                     }
@@ -318,6 +319,16 @@ public class RedisUtils {
         }
 
         return sessionList;
+    }
+
+    /**
+     * 불필요한 문자를 제거하여 주어진 Redis 키를 정리합니다.
+     *
+     * @param key 원본 키
+     * @return 정리된 키
+     */
+    private String cleanKey(String key) {
+        return key.replace("\"", "").replace("sessionId:", "");
     }
 
     public boolean deleteKeysByStr(String str) {
