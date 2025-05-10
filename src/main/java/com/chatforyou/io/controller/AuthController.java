@@ -48,8 +48,9 @@ public class AuthController {
 		result.put("result", "success");
 		result.put("userData", loginUserInfo);
 
-		response.addHeader("AccessToken", jwtService.createAccessToken(JwtPayload.of(loginUserInfo)));
-		response.addHeader("RefreshToken", jwtService.createRefreshToken(JwtPayload.of(loginUserInfo)));
+		JwtPayload jwtPayload = JwtPayload.of(loginUserInfo);
+		response.addHeader("AccessToken", jwtService.createAccessToken(jwtPayload));
+		response.addHeader("RefreshToken", jwtService.createRefreshToken(jwtPayload));
 
 		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
@@ -63,8 +64,9 @@ public class AuthController {
 		result.put("result", "success");
 		result.put("userData", loginUserInfo);
 
-		response.addHeader("AccessToken", jwtService.createAccessToken(JwtPayload.of(loginUserInfo)));
-		response.addHeader("RefreshToken", jwtService.createRefreshToken(JwtPayload.of(loginUserInfo)));
+		JwtPayload jwtPayload = JwtPayload.of(loginUserInfo);
+		response.addHeader("AccessToken", jwtService.createAccessToken(jwtPayload));
+		response.addHeader("RefreshToken", jwtService.createRefreshToken(jwtPayload));
 
 		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
@@ -74,7 +76,7 @@ public class AuthController {
 			@RequestHeader("Authorization") String bearerToken,
 			@RequestBody UserInVo user, HttpServletRequest request, HttpServletResponse response) throws BadRequestException {
 		Map<String, Object> result = new ConcurrentHashMap<>();
-		jwtService.verifyAccessToken(bearerToken);
+		jwtService.validateAccessToken(bearerToken);
 		authService.logoutUser(user);
 		result.put("result", "success");
 		return new ResponseEntity<>(result, HttpStatus.OK);

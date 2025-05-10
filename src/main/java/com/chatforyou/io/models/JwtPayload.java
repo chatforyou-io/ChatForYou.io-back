@@ -14,6 +14,7 @@ public class JwtPayload {
     private String userId;
     private boolean isAdmin;
     private Long createDate;
+    private Long lastLoginDate;
 
     public static JwtPayload of(UserOutVo user){
         return JwtPayload.builder()
@@ -21,6 +22,7 @@ public class JwtPayload {
                 .userId(user.getId())
                 .isAdmin(0 == user.getIdx())
                 .createDate(new Date(System.currentTimeMillis()).getTime())
+                .lastLoginDate(user.getLastLoginDate())
                 .build();
     }
 
@@ -30,6 +32,7 @@ public class JwtPayload {
                 .userId(user.getId())
                 .isAdmin(0 == user.getIdx())
                 .createDate(new Date(System.currentTimeMillis()).getTime())
+                .lastLoginDate(user.getLastLoginDate())
                 .build();
     }
 }

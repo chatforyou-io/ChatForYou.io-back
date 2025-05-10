@@ -397,7 +397,7 @@ public class RedisUtils {
 
     public <T> T getRedisDataByDataType(String key, DataType dataType, Class<T> clazz) throws BadRequestException {
         String redisKey = "";
-        if (DataType.LOGIN_USER.equals(dataType) || DataType.USER_REFRESH_TOKEN.equals(dataType)) {
+        if (DataType.LOGIN_USER.equals(dataType) || DataType.USER_REFRESH_TOKEN.equals(dataType) || DataType.USER_LAST_LOGIN_DATE.equals(dataType)) {
             redisKey = key.contains("user:") ? key : "user:" + key;
         } else {
             redisKey = makeRedisKey(key);
@@ -414,6 +414,8 @@ public class RedisUtils {
                 return clazz.cast(slaveTemplate.opsForHash().get(redisKey, DataType.LOGIN_USER.getType()));
             case USER_REFRESH_TOKEN:
                 return clazz.cast(slaveTemplate.opsForHash().get(redisKey, DataType.USER_REFRESH_TOKEN.getType()));
+            case USER_LAST_LOGIN_DATE:
+                return clazz.cast(slaveTemplate.opsForHash().get(redisKey, DataType.USER_LAST_LOGIN_DATE.getType()));
             default:
                 throw new BadRequestException("Dose Not Exist DataType");
         }
@@ -568,6 +570,13 @@ public class RedisUtils {
         masterTemplate.opsForHash().put(redisKey, "token_update_time", new Date().getTime());
         // 유저 데이터 유효시간 업데이트
         masterTemplate.expire(redisKey, REDIS_TIMEOUT, TimeUnit.DAYS);
+    }
+
+    public void saveLastLoginDate(Long userIdx, Long lastLoginDate) {
+        // redisKey = user:userIdx
+        String redisKey = "user:" + userIdx;
+        // index = userId && nickName
+        masterTemplate.opsForHash().put(redisKey, DataType.USER_LAST_LOGIN_DATE.getType(), lastLoginDate);
     }
 
     public void deleteInactiveUsers() {
