@@ -39,7 +39,7 @@ public class ChatRoomController {
     public ResponseEntity<Map<String, Object>> createChatRoom(
             @RequestHeader("Authorization") String bearerToken,
             @RequestBody(required = true) ChatRoomInVo chatRoomInVo) throws BadRequestException {
-        JwtPayload payload = jwtService.verifyAccessToken(bearerToken);
+        JwtPayload payload = jwtService.validateAccessToken(bearerToken);
         ChatRoomOutVo chatRoom = chatRoomService.createChatRoom(chatRoomInVo, payload);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
@@ -58,7 +58,7 @@ public class ChatRoomController {
     public ResponseEntity<Map<String, Object>> getChatRoomInfo(
             @RequestHeader("Authorization") String bearerToken,
             @PathVariable("sessionId") String sessionId) throws BadRequestException {
-        jwtService.verifyAccessToken(bearerToken);
+        jwtService.validateAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         ChatRoomOutVo chatRoom = chatRoomService.findChatRoomBySessionId(sessionId);
         response.put("result", "success");
@@ -79,7 +79,7 @@ public class ChatRoomController {
             @RequestHeader("Authorization") String bearerToken,
             @PathVariable("sessionId") String sessionId,
             @RequestBody ChatRoomInVo chatRoomInVo) throws BadRequestException {
-        JwtPayload payload = jwtService.verifyAccessToken(bearerToken);
+        JwtPayload payload = jwtService.validateAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         ChatRoomOutVo chatRoom = chatRoomService.updateChatRoom(sessionId, chatRoomInVo, payload);
         response.put("result", "success");
@@ -100,7 +100,7 @@ public class ChatRoomController {
     public ResponseEntity<Map<String, Object>> deleteChatRoom(
             @RequestHeader("Authorization") String bearerToken,
             @PathVariable("sessionId") String sessionId) throws OpenViduJavaClientException, OpenViduHttpException, BadRequestException {
-        JwtPayload payload = jwtService.verifyAccessToken(bearerToken);
+        JwtPayload payload = jwtService.validateAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", chatRoomService.deleteChatRoom(sessionId, payload, false) ? "success" : "Fail Delete ChatRoom");
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -144,7 +144,7 @@ public class ChatRoomController {
     public ResponseEntity<Map<String, Object>> getOpenViduData(
             @RequestHeader("Authorization") String bearerToken,
             @RequestParam String sessionId) throws BadRequestException {
-        jwtService.verifyAccessToken(bearerToken);
+        jwtService.validateAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         response.put("openViduData", chatRoomService.getOpenviduDataBySessionId(sessionId));
@@ -164,7 +164,7 @@ public class ChatRoomController {
             @RequestHeader("Authorization") String bearerToken,
             @PathVariable("sessionId") String sessionId,
             @RequestParam("user_idx") String userIdx) throws BadRequestException {
-        jwtService.verifyAccessToken(bearerToken);
+        jwtService.validateAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         response.put("connectionTokenData", chatRoomService.getConnectionInfo(sessionId, Long.parseLong(userIdx)));
@@ -186,7 +186,7 @@ public class ChatRoomController {
             @RequestHeader("Authorization") String bearerToken,
             @PathVariable("sessionId") String sessionId,
             @RequestParam("user_idx") String userIdx) throws BadRequestException, OpenViduJavaClientException, OpenViduHttpException {
-        JwtPayload payload = jwtService.verifyAccessToken(bearerToken);
+        JwtPayload payload = jwtService.validateAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         response.put("joinData", chatRoomService.joinChatRoom(sessionId, Long.parseLong(userIdx), payload));
@@ -206,7 +206,7 @@ public class ChatRoomController {
             @RequestHeader("Authorization") String bearerToken,
             @PathVariable("sessionId") String sessionId,
             @RequestBody ChatRoomInVo chatRoomInVo) throws BadRequestException {
-        jwtService.verifyAccessToken(bearerToken);
+        jwtService.validateAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", chatRoomService.checkRoomPassword(sessionId, chatRoomInVo.getPwd()));
         return new ResponseEntity<>(response, HttpStatus.OK);

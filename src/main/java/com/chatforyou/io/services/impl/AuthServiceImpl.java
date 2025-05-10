@@ -35,7 +35,6 @@ public class AuthServiceImpl implements AuthService {
     private final AuthUtils authUtils;
     private final UserService userService;
     private final SseService sseService;
-    private final SchedulerConfig schedulerConfig;
 
     private Map<String, AdminSessionData> adminSessions = new HashMap<>();
 
@@ -78,6 +77,7 @@ public class AuthServiceImpl implements AuthService {
         UserOutVo userOutVo = UserOutVo.of(user, false);
 
         this.userRedisJob(userOutVo);
+        redisUtils.saveLastLoginDate(userOutVo.getIdx(), userOutVo.getLastLoginDate());
 
         return userOutVo;
     }
@@ -99,6 +99,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = null;
+        UserOutVo userOutVo = null;
 
         Optional<SocialUser> socialUser = socialRepository.findSocialUserByProviderAccountIdAndAndProvider(socialUserInVo.getProviderAccountId(), socialUserInVo.getProvider());
         if (socialUser.isPresent()) { // 소셜 로그인 유저 정보가 있다면
@@ -107,12 +108,11 @@ public class AuthServiceImpl implements AuthService {
             this.updateLastLoginTime(user);
 
             // userVo 로 변환
-            UserOutVo userOutVo = UserOutVo.of(user, false);
+            userOutVo = UserOutVo.of(user, false);
 
             // 유저 레디스 저장
             this.userRedisJob(userOutVo);
 
-            return userOutVo;
         } else { // 소셜 로그인 유저 정보가 없다면 user 에 insert
             user = User.ofSocialUser(socialUserInVo);
             userRepository.saveAndFlush(user);
@@ -121,13 +121,17 @@ public class AuthServiceImpl implements AuthService {
             SocialUser socialUserEntity = SocialUser.ofUser(user, socialUserInVo);
             socialRepository.saveAndFlush(socialUserEntity);
 
-            UserOutVo userOutVo = UserOutVo.of(socialUserEntity, false);
+            userOutVo = UserOutVo.of(socialUserEntity, false);
 
-            // 유저 레디스 저장
-            this.userRedisJob(userOutVo);
-
-            return userOutVo;
         }
+
+        // 유저 로그인 시간 저장
+        redisUtils.saveLastLoginDate(user.getIdx(), user.getLastLoginDate());
+
+        // 유저 레디스 저장
+        this.userRedisJob(userOutVo);
+
+        return userOutVo;
     }
 
     /**

@@ -5,7 +5,6 @@ import com.chatforyou.io.models.ValidateType;
 import com.chatforyou.io.models.in.UserInVo;
 import com.chatforyou.io.models.in.UserUpdateVo;
 import com.chatforyou.io.models.out.UserOutVo;
-import com.chatforyou.io.services.AuthService;
 import com.chatforyou.io.services.JwtService;
 import com.chatforyou.io.services.UserService;
 import com.chatforyou.io.utils.AuthUtils;
@@ -68,7 +67,7 @@ public class UserController {
     @PatchMapping("/update")
     public ResponseEntity<Map<String, Object>> updateUser(@RequestHeader("Authorization") String bearerToken,
                                                           @RequestBody UserUpdateVo userVo) throws BadRequestException {
-        JwtPayload jwtPayload = jwtService.verifyAccessToken(bearerToken);
+        JwtPayload jwtPayload = jwtService.validateAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         response.put("userData", userService.updateUser(userVo, jwtPayload));
@@ -78,7 +77,7 @@ public class UserController {
     @PatchMapping("/update/pwd")
     public ResponseEntity<Map<String, Object>> updateUserPasswd(@RequestHeader("Authorization") String bearerToken,
                                                                 @RequestBody UserUpdateVo userVo) throws BadRequestException {
-        JwtPayload jwtPayload = jwtService.verifyAccessToken(bearerToken);
+        JwtPayload jwtPayload = jwtService.validateAccessToken(bearerToken);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
         response.put("userData", userService.updateUserPwd(userVo, jwtPayload));
@@ -89,7 +88,7 @@ public class UserController {
     public ResponseEntity<Map<String, Object>> deleteUser(
             @RequestHeader("Authorization") String bearerToken,
             @RequestBody UserInVo user) throws BadRequestException {
-        JwtPayload jwtPayload = jwtService.verifyAccessToken(bearerToken);
+        JwtPayload jwtPayload = jwtService.validateAccessToken(bearerToken);
         userService.deleteUser(user, jwtPayload);
         Map<String, Object> response = new HashMap<>();
         response.put("result", "success");
@@ -162,7 +161,7 @@ public class UserController {
             String pageSizeStr,
             UserListFunction userListFunction
     ) throws BadRequestException {
-        jwtService.verifyAccessToken(bearerToken);
+        jwtService.validateAccessToken(bearerToken);
         int pageNum = Integer.parseInt(pageNumStr);
         int pageSize = Integer.parseInt(pageSizeStr);
 

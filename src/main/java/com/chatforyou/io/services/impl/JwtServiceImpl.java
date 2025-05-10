@@ -60,6 +60,7 @@ public class JwtServiceImpl implements JwtService {
                 .claim("userId", jwtPayload.getUserId())
 //                .claim("isAdmin", jwtPayload.isAdmin())
                 .claim("issuedAt", jwtPayload.getCreateDate())
+                .claim("lastLoginAt", jwtPayload.getLastLoginDate())
                 .issuer(issuer)
                 .expiration(new Date(jwtPayload.getCreateDate() + accessExpiration))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
@@ -72,9 +73,11 @@ public class JwtServiceImpl implements JwtService {
         String refreshToken = Jwts.builder()
                 .subject(REFRESH_TOKEN)
                 .claim("idx", userIdx)
-//                .claim("userId", jwtPayload.getUserId())
+                .claim("userId", jwtPayload.getUserId())
 //                .claim("isAdmin", jwtPayload.isAdmin())
 //                .claim("issuedAt", jwtPayload.getCreateDate())
+                .claim("issuedAt", jwtPayload.getCreateDate())
+                .claim("lastLoginAt", jwtPayload.getLastLoginDate())
                 .issuer(issuer)
                 .expiration(new Date(jwtPayload.getCreateDate() + refreshExpiration))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
@@ -95,7 +98,15 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public JwtPayload verifyAccessToken(String jwtToken) throws BadRequestException {
+    public void saveLastLoginDate(JwtPayload jwtPayload) {
+        Long lastLoginDate = jwtPayload.getLastLoginDate() == null ?
+                userRepository.findUserByIdx(jwtPayload.getIdx()).get().getLastLoginDate() : jwtPayload.getLastLoginDate();
+
+        redisUtils.saveLastLoginDate(jwtPayload.getIdx(), lastLoginDate);
+    }
+
+    @Override
+    public JwtPayload validateAccessToken(String jwtToken) throws BadRequestException {
         // TODO DB 에서 유저 찾아서 검증하는 로직은 모두 이쪽을 이동 필요?? >> 근데 db 에서 가져오면서 바로 예외처리하는데 굳이 2번해야함?
         String token = this.subStrBearerToken(jwtToken);
         try{
@@ -106,12 +117,23 @@ public class JwtServiceImpl implements JwtService {
                     .build()
                     .parseClaimsJws(token);
 
-            Claims claims = claimsJws.getBody();
+            Claims claims = claimsJws.getPayload();
+            Long userIdx = claims.get("idx", Long.class);
+            String userId = claims.get("userId", String.class);
+            Long lastLoginAt = claims.get("lastLoginAt", Long.class);
+
+            // 유저의 lastLoginDate 체크
+            Long savedLastLoginDate = redisUtils.getRedisDataByDataType(String.valueOf(userIdx), DataType.USER_LAST_LOGIN_DATE, Long.class);
+            if (!Objects.equals(lastLoginAt, savedLastLoginDate)) {
+                throw new ExceptionController.UnauthorizedException("Session expired due to login from another device");
+            }
+
             return JwtPayload.builder()
-                    .userId(claims.get("userId", String.class))
-                    .idx(claims.get("idx", Long.class))
+                    .idx(userIdx)
+                    .userId(userId)
 //                    .isAdmin(claims.get("isAdmin", Boolean.class))
                     .createDate(claims.get("issuedAt", Long.class))
+                    .lastLoginDate(claims.get("lastLoginAt", Long.class))
                     .build();
         }catch (SignatureException e) {
             // 비밀 키 검증 실패 시 처리
@@ -123,7 +145,7 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public JwtPayload verifyRefreshToken(Long userIdx, String jwtToken) throws BadRequestException {
+    public JwtPayload validateRefreshToken(Long userIdx, String jwtToken) throws BadRequestException {
         String tokenInRedis = redisUtils.getRedisDataByDataType(String.valueOf(userIdx), DataType.USER_REFRESH_TOKEN, String.class);
         if (tokenInRedis == null) {
             throw new ExceptionController.UnauthorizedException("Refresh token not found for the logged-in user");
@@ -140,7 +162,7 @@ public class JwtServiceImpl implements JwtService {
                     .requireIssuer(issuer)
                     .requireSubject(REFRESH_TOKEN)
                     .build()
-                    .parseClaimsJws(token);
+                    .parseSignedClaims(token);
 
             Claims claims = claimsJws.getBody();
             Long userIdxInToken = claims.get("idx", Long.class);
@@ -164,7 +186,9 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public Map<String, String> reissueToken(Long userIdx, String refreshToken) throws BadRequestException {
         Map<String, String> result = new ConcurrentHashMap<>();
-        JwtPayload payload = this.verifyRefreshToken(userIdx, refreshToken);
+        JwtPayload payload = this.validateRefreshToken(userIdx, refreshToken);
+
+        this.saveLastLoginDate(payload);
         result.put("accessToken", this.createAccessToken(payload));
         result.put("refreshToken", this.createRefreshToken(payload));
         // 유저 데이터 유효시간 업데이트
