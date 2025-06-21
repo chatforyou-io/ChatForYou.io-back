@@ -1,13 +1,13 @@
 # ChatForYou.io - Backend Server
 
 ## 1. 프로젝트 개요
-
-ChatForYou.io는 OpenVidu 기반의 실시간 화상 채팅 서비스입니다. 사용자들이 채팅방을 생성하고 참여하여 화상 통화, 텍스트 채팅, 화면 공유 등의 기능을 제공합니다. Spring Boot 3.3.0과 Java 17을 기반으로 구축된 RESTful API 서버입니다.
+- ChatForYou.io는 OpenVidu 기반의 실시간 화상 채팅 서비스입니다.   
+- 사용자들이 채팅방을 생성하고 참여하여 화상 통화, 텍스트 채팅, 화면 공유 등의 기능을 제공합니다.  
+- Spring Boot 3.3.0과 Java 17을 기반으로 구축된 RESTful API 서버입니다.  
 
 ### 주요 특징
 - 실시간 화상 통화 및 음성 통화
 - 다중 사용자 채팅방 지원
-- 화면 공유 기능
 - 통화 녹화 및 재생 기능
 - JWT 기반 인증 시스템
 - 소셜 로그인 지원 (OAuth2)
@@ -68,23 +68,14 @@ src/
 
 ### 💬 채팅방 관리
 - 채팅방 생성/수정/삭제
-- 공개/비공개 채팅방 설정
-- 채팅방 비밀번호 설정
 - 채팅방 목록 조회 및 검색
 - 사용자 입장/퇴장 관리
 
 ### 📹 화상 통화 기능
 - 다중 사용자 화상 통화
-- 음성 전용 통화 모드
-- 화면 공유
 - 카메라/마이크 제어
 - 실시간 연결 상태 관리
 
-### 🎥 녹화 기능
-- 통화 녹화 시작/중지
-- 녹화 파일 관리
-- 녹화 설정 (해상도, 품질 등)
-- 녹화 파일 다운로드
 
 ### 🔔 실시간 알림
 - SSE(Server-Sent Events) 기반 실시간 알림
@@ -102,10 +93,8 @@ src/
 ### Backend Framework
 - **Spring Boot** 3.3.0
 - **Java** 17
-- **Spring Security** 3.3.0
 - **Spring Data JPA**
 - **Spring WebSocket**
-- **Spring Session**
 
 ### Database & Cache
 - **MariaDB** - 메인 데이터베이스
@@ -117,12 +106,10 @@ src/
 - **WebRTC** - 실시간 통신
 
 ### 메시징 & 알림
-- **RabbitMQ** - 메시지 큐
 - **SSE (Server-Sent Events)** - 실시간 알림
 
 ### 인증 & 보안
 - **JWT (JSON Web Token)** - 토큰 기반 인증
-- **OAuth2** - 소셜 로그인
 - **Spring Security** - 보안 프레임워크
 
 ### 기타 라이브러리
@@ -130,8 +117,6 @@ src/
 - **Gson** - JSON 처리
 - **Apache HttpClient** - HTTP 통신
 - **JavaMail** - 이메일 발송
-- **MinIO** - 파일 저장
-- **Micrometer** - 모니터링 (Prometheus)
 
 ### 빌드 도구
 - **Gradle** 8.x
@@ -217,6 +202,7 @@ sse.keep-alive-timeout=20
 
 # 스레드 풀 설정
 spring.thread.bound.multi=6
+
 ```
 
 ### 5.8 애플리케이션 실행
@@ -248,22 +234,7 @@ docker run -p 8443:8443 \
   chatforyou-backend
 ```
 
-### 5.9 API 문서
-서버 실행 후 다음 URL에서 API 문서를 확인할 수 있습니다:
-- 개발 환경: `http://localhost:8443/swagger-ui.html`
-- 운영 환경: `https://your-domain.com/swagger-ui.html`
-
-### 5.10 모니터링
-Prometheus 메트릭은 다음 엔드포인트에서 확인할 수 있습니다:
-- `http://localhost:8443/actuator/prometheus`
-
 ---
 
 ## 라이선스
 이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
-
-## 기여하기
-프로젝트에 기여하고 싶으시다면 Pull Request를 보내주세요. 모든 기여를 환영합니다!
-
-## 문의사항
-프로젝트에 대한 문의사항이 있으시면 이슈를 등록하거나 이메일로 연락주세요.
