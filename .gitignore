@@ -42,6 +42,9 @@ out/
 # VS Code
 .vscode/
 
+# cursor
+.cursor/
+
 # Compiled class file
 *.class
 
